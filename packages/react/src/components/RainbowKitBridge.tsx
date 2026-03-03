@@ -11,10 +11,15 @@ const RAINBOWKIT_ID = 'rainbowkit'
 // when different copies of viem / use-wallet are resolved across the monorepo.
 // ---------------------------------------------------------------------------
 
+/** Wagmi Config — derived from watchAccount so no direct @wagmi/core type import is needed. */
+export type WagmiConfig = Parameters<typeof watchAccount>[0]
+
 /** Minimal wallet interface used by the bridge. */
 interface WalletLike {
   id: string
   isConnected: boolean
+  /** Set by RainbowKitWallet while its own disconnect() is running. Prevents re-entrancy. */
+  isDisconnecting?: boolean
   connect: () => Promise<unknown>
   disconnect: () => Promise<void>
   resumeSession: () => Promise<void>
@@ -57,8 +62,7 @@ export function createRainbowKitBridgeState(): RainbowKitBridgeState {
  * Must be used together with `<RainbowKitBridge />` in the component tree.
  */
 export function createGetEvmAccounts(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  wagmiConfig: any,
+  wagmiConfig: WagmiConfig,
   state: RainbowKitBridgeState,
 ): () => Promise<string[]> {
   return () => {
@@ -89,24 +93,38 @@ export function createGetEvmAccounts(
 
       let unwatchFn: (() => void) | null = null
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const resolveWithAccount = (account: any) => {
+        const addrs: string[] = account.addresses
+          ? [...account.addresses].filter((a: unknown): a is string => a != null)
+          : [account.address as string]
+
+        // Delay briefly so RainbowKit can detect the connection and
+        // close its modal before our connect() flow continues.
+        setTimeout(() => done(addrs), 200)
+      }
+
       const startWatching = () => {
         unwatchFn = watchAccount(wagmiConfig, {
           onChange(account) {
             if (account.isConnected && account.address) {
               unwatchFn?.()
               unwatchFn = null
-              // Delay briefly so RainbowKit can detect the connection and
-              // close its modal before our connect() flow continues.
-              const address = account.address
-              setTimeout(() => {
-                const addrs: string[] = account.addresses
-                  ? [...account.addresses].filter((a): a is `0x${string}` => a != null)
-                  : [address]
-                done(addrs)
-              }, 200)
+              resolveWithAccount(account)
             }
           },
         })
+
+        // Handle the race where the wallet connected between wagmiDisconnect
+        // resolving and watchAccount being registered — watchAccount only fires
+        // on changes, so a connection that already happened is invisible to it.
+        const current = getAccount(wagmiConfig)
+        if (current.isConnected && current.address) {
+          unwatchFn?.()
+          unwatchFn = null
+          resolveWithAccount(current)
+          return
+        }
 
         // Timeout after 2 minutes
         setTimeout(() => {
@@ -214,7 +232,10 @@ export function RainbowKitBridge({ walletManager, state }: RainbowKitBridgeProps
       // disconnects the old session before showing the wallet selection modal)
       if (state.connectInProgress || connectingRef.current) return
       const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
-      if (rkWallet && rkWallet.isConnected) {
+      // Skip if RainbowKitWallet.disconnect() itself triggered this wagmi event —
+      // it already handles its own cleanup. Only act on external disconnects
+      // (e.g. user clicked Disconnect inside RainbowKit's AccountModal).
+      if (rkWallet && rkWallet.isConnected && !rkWallet.isDisconnecting) {
         rkWallet.disconnect().catch((err: Error) => {
           console.warn('[RainbowKitBridge] auto-disconnect failed:', err.message)
         })
@@ -222,11 +243,26 @@ export function RainbowKitBridge({ walletManager, state }: RainbowKitBridgeProps
     },
   })
 
+  // Safety net: catch wagmi reconnect failures that fired before onDisconnect was registered.
+  // If wagmi lands in 'disconnected' while use-wallet still thinks the wallet is connected,
+  // clean up so the user is prompted to reconnect instead of hitting a signing error later.
+  useEffect(() => {
+    if (account.status === 'disconnected' && !state.connectInProgress && !connectingRef.current) {
+      const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
+      if (rkWallet?.isConnected && !rkWallet.isDisconnecting) {
+        rkWallet.disconnect().catch((err: Error) => {
+          console.warn('[RainbowKitBridge] stale-disconnect cleanup failed:', err.message)
+        })
+      }
+    }
+  }, [account.status, walletManager, state])
+
   // On mount / when wagmi state changes, sync with use-wallet
   useEffect(() => {
     if (account.isConnected && account.address) {
       const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
-      if (rkWallet && !connectingRef.current) {
+      // Skip if getEvmAccounts flow is in progress — it handles its own connect
+      if (rkWallet && !connectingRef.current && !state.connectInProgress) {
         if (!rkWallet.isConnected) {
           // Wallet not connected in store — do a full connect
           connectingRef.current = true

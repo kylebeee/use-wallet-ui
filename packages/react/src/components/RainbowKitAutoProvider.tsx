@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RainbowKitProvider, lightTheme, darkTheme } from '@rainbow-me/rainbowkit'
-import { RainbowKitBridge, type RainbowKitBridgeState } from './RainbowKitBridge'
+import { RainbowKitBridge, type RainbowKitBridgeState, type WagmiConfig } from './RainbowKitBridge'
 import type { ResolvedTheme } from '../hooks/useResolvedTheme'
 
 /**
@@ -11,8 +11,7 @@ import type { ResolvedTheme } from '../hooks/useResolvedTheme'
  * `wagmiConfig` and `bridgeState` in closure so WalletUIProvider only needs
  * to pass `queryClient`, `resolvedTheme`, `walletManager`, and `children`.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createBoundProvider(wagmiConfig: any, bridgeState: RainbowKitBridgeState) {
+export function createBoundProvider(wagmiConfig: WagmiConfig, bridgeState: RainbowKitBridgeState) {
   return function RainbowKitAutoProvider({
     queryClient,
     resolvedTheme,

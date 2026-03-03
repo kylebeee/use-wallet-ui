@@ -1,3 +1,10 @@
+import { getDefaultConfig as rkGetDefaultConfig } from '@rainbow-me/rainbowkit'
+import {
+  safeWallet,
+  rainbowWallet,
+  metaMaskWallet,
+  walletConnectWallet,
+} from '@rainbow-me/rainbowkit/wallets'
 import {
   RainbowKitBridge,
   createRainbowKitBridgeState,
@@ -5,9 +12,27 @@ import {
   type RainbowKitBridgeState,
   type RainbowKitBridgeProps,
   type WalletManagerLike,
+  type WagmiConfig,
 } from './components/RainbowKitBridge'
 import { createBoundProvider } from './components/RainbowKitAutoProvider'
 import type { RainbowKitUIConfig } from './providers/WalletUIProvider'
+
+const DEFAULT_WALLETS = [
+  {
+    groupName: 'Popular',
+    wallets: [safeWallet, rainbowWallet, metaMaskWallet, walletConnectWallet],
+  },
+]
+
+/**
+ * Like RainbowKit's `getDefaultConfig`, but excludes the Base Account wallet
+ * from the default wallet list. Pass an explicit `wallets` array to override.
+ *
+ * Import from `@txnlab/use-wallet-ui-react/rainbowkit` instead of
+ * `@rainbow-me/rainbowkit` — all other options are identical.
+ */
+export const getDefaultConfig: typeof rkGetDefaultConfig = (params) =>
+  rkGetDefaultConfig({ wallets: DEFAULT_WALLETS, ...params })
 
 // Backward-compatible exports
 export {
@@ -31,8 +56,7 @@ export type { RainbowKitUIConfig }
  * `<WalletUIProvider rainbowkit={...}>`. The provider handles all
  * WagmiProvider/RainbowKitProvider/bridge wiring internally.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createRainbowKitConfig(options: { wagmiConfig: any }): RainbowKitUIConfig {
+export function createRainbowKitConfig(options: { wagmiConfig: WagmiConfig }): RainbowKitUIConfig {
   const bridgeState = createRainbowKitBridgeState()
   const getEvmAccounts = createGetEvmAccounts(options.wagmiConfig, bridgeState)
   const Provider = createBoundProvider(options.wagmiConfig, bridgeState)
