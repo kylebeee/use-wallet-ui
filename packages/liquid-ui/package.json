@@ -1,6 +1,6 @@
 {
   "name": "@d13co/liquid-ui",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Shared UI components for use-wallet-ui and Liquid Wallet Companion extensions",
   "type": "module",
   "exports": {

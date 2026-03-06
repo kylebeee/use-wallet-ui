@@ -4,7 +4,7 @@
   "description": "Monorepo for use-wallet UI and related packages",
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @txnlab/use-wallet-ui-react build && pnpm --filter @d13co/liquid-companion-extension build",
+    "build": "env NODE_OPTIONS=\"--max-old-space-size=4096\" pnpm --filter @txnlab/use-wallet-ui-react build && pnpm --filter @d13co/liquid-companion-extension build",
     "build:examples": "pnpm --filter @txnlab/use-wallet-ui-react-example build",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @txnlab/use-wallet-ui-e2e e2e",
