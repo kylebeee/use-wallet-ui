@@ -16,6 +16,7 @@ const BridgeDialogContext = createContext<BridgeDialogContextType | undefined>(u
 // Statuses that indicate bridge is actively processing
 const PROCESSING_STATUSES = new Set([
   'approving',
+  'bundling',
   'signing',
   'sending',
   'opting-in',

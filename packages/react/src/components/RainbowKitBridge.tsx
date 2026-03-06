@@ -107,6 +107,7 @@ export function createGetEvmAccounts(
       const startWatching = () => {
         unwatchFn = watchAccount(wagmiConfig, {
           onChange(account) {
+            console.log('[RainbowKitBridge] watchAccount onChange', { isConnected: account.isConnected, address: account.address, status: account.status, connector: account.connector?.name })
             if (account.isConnected && account.address) {
               unwatchFn?.()
               unwatchFn = null
@@ -211,34 +212,49 @@ export function RainbowKitBridge({ walletManager, state }: RainbowKitBridgeProps
   const connectingRef = useRef(false)
 
   useAccountEffect({
-    onConnect({ address }) {
+    onConnect({ address, connector, isReconnected }) {
+      console.log('[RainbowKitBridge] onConnect', { address, connector: connector?.name, isReconnected, connectInProgress: state.connectInProgress, connectingRef: connectingRef.current, rkWalletConnected: walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)?.isConnected })
       // Ignore events during getEvmAccounts flow — the SDK handles the connect
-      if (state.connectInProgress || connectingRef.current) return
+      if (state.connectInProgress || connectingRef.current) {
+        console.log('[RainbowKitBridge] onConnect: skipping (connectInProgress or connecting)')
+        return
+      }
       const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
       if (rkWallet && !rkWallet.isConnected && address) {
+        console.log('[RainbowKitBridge] onConnect: triggering rkWallet.connect()')
         connectingRef.current = true
         rkWallet
           .connect()
+          .then(() => console.log('[RainbowKitBridge] onConnect: rkWallet.connect() succeeded'))
           .catch((err: Error) => {
             console.warn('[RainbowKitBridge] auto-connect failed:', err.message)
           })
           .finally(() => {
             connectingRef.current = false
           })
+      } else {
+        console.log('[RainbowKitBridge] onConnect: skipping connect (rkWallet.isConnected=%s, address=%s)', rkWallet?.isConnected, address)
       }
     },
     onDisconnect() {
+      console.log('[RainbowKitBridge] onDisconnect', { connectInProgress: state.connectInProgress, connectingRef: connectingRef.current, rkWalletConnected: walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)?.isConnected, rkWalletDisconnecting: walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)?.isDisconnecting })
       // Ignore wagmi disconnect events during the connect flow (getEvmAccounts
       // disconnects the old session before showing the wallet selection modal)
-      if (state.connectInProgress || connectingRef.current) return
+      if (state.connectInProgress || connectingRef.current) {
+        console.log('[RainbowKitBridge] onDisconnect: skipping (connectInProgress or connecting)')
+        return
+      }
       const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
       // Skip if RainbowKitWallet.disconnect() itself triggered this wagmi event —
       // it already handles its own cleanup. Only act on external disconnects
       // (e.g. user clicked Disconnect inside RainbowKit's AccountModal).
       if (rkWallet && rkWallet.isConnected && !rkWallet.isDisconnecting) {
+        console.log('[RainbowKitBridge] onDisconnect: triggering rkWallet.disconnect()')
         rkWallet.disconnect().catch((err: Error) => {
           console.warn('[RainbowKitBridge] auto-disconnect failed:', err.message)
         })
+      } else {
+        console.log('[RainbowKitBridge] onDisconnect: skipping (rkWallet.isConnected=%s, isDisconnecting=%s)', rkWallet?.isConnected, rkWallet?.isDisconnecting)
       }
     },
   })
@@ -247,9 +263,11 @@ export function RainbowKitBridge({ walletManager, state }: RainbowKitBridgeProps
   // If wagmi lands in 'disconnected' while use-wallet still thinks the wallet is connected,
   // clean up so the user is prompted to reconnect instead of hitting a signing error later.
   useEffect(() => {
+    console.log('[RainbowKitBridge] account.status changed:', account.status, { connectInProgress: state.connectInProgress, connectingRef: connectingRef.current })
     if (account.status === 'disconnected' && !state.connectInProgress && !connectingRef.current) {
       const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
       if (rkWallet?.isConnected && !rkWallet.isDisconnecting) {
+        console.log('[RainbowKitBridge] stale-disconnect safety net triggered')
         rkWallet.disconnect().catch((err: Error) => {
           console.warn('[RainbowKitBridge] stale-disconnect cleanup failed:', err.message)
         })
@@ -259,15 +277,18 @@ export function RainbowKitBridge({ walletManager, state }: RainbowKitBridgeProps
 
   // On mount / when wagmi state changes, sync with use-wallet
   useEffect(() => {
+    console.log('[RainbowKitBridge] mount/account effect', { isConnected: account.isConnected, address: account.address, connector: account.connector?.name, connectInProgress: state.connectInProgress, connectingRef: connectingRef.current, rkWalletConnected: walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)?.isConnected })
     if (account.isConnected && account.address) {
       const rkWallet = walletManager.wallets.find((w) => w.id === RAINBOWKIT_ID)
       // Skip if getEvmAccounts flow is in progress — it handles its own connect
       if (rkWallet && !connectingRef.current && !state.connectInProgress) {
         if (!rkWallet.isConnected) {
           // Wallet not connected in store — do a full connect
+          console.log('[RainbowKitBridge] mount effect: triggering rkWallet.connect()')
           connectingRef.current = true
           rkWallet
             .connect()
+            .then(() => console.log('[RainbowKitBridge] mount effect: rkWallet.connect() succeeded'))
             .catch((err: Error) => {
               console.warn('[RainbowKitBridge] mount auto-connect failed:', err.message)
             })
@@ -277,8 +298,11 @@ export function RainbowKitBridge({ walletManager, state }: RainbowKitBridgeProps
         } else {
           // Wallet connected in store but instance may need session resumed
           // (e.g., after WalletManager recreation on network switch)
+          console.log('[RainbowKitBridge] mount effect: resuming session')
           rkWallet.resumeSession().catch(() => {})
         }
+      } else {
+        console.log('[RainbowKitBridge] mount effect: skipping (connectInProgress=%s, connectingRef=%s, rkWalletConnected=%s)', state.connectInProgress, connectingRef.current, rkWallet?.isConnected)
       }
     }
   }, [account.isConnected, account.address, walletManager])

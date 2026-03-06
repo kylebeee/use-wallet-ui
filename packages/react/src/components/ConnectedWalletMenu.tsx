@@ -149,6 +149,7 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
     optIn.status === 'sending' ||
     bridge.status === 'permit-signing' ||
     bridge.status === 'approving' ||
+    bridge.status === 'bundling' ||
     bridge.status === 'signing' ||
     bridge.status === 'sending' ||
     bridge.status === 'opting-in' ||

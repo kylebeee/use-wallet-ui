@@ -19,6 +19,7 @@ import { mapBridgeToPanelProps } from '../utils/bridgePropsMapper'
 const PROCESSING_STATUSES = new Set([
   'permit-signing',
   'approving',
+  'bundling',
   'signing',
   'sending',
   'opting-in',
@@ -40,6 +41,7 @@ function getSigningProgress(status: string, optInNeeded: boolean): { current: nu
       return { current: 1, total }
     case 'permit-signing':
     case 'approving':
+    case 'bundling':
       return { current: optInNeeded ? 2 : 1, total }
     case 'signing':
       return { current: total, total }
@@ -55,6 +57,7 @@ function getMinimizedTitle(
   error: string | null,
   receivedAmount: string | null,
   destinationTokenSymbol: string | null,
+  sourceChainSymbol: string | null,
 ): string {
   const signing = getSigningProgress(status, optInNeeded)
   if (signing) {
@@ -92,7 +95,8 @@ function getMinimizedTitle(
       return 'Bridge: Opting in'
     case 'success': {
       if (receivedAmount && destinationTokenSymbol) {
-        return `Received ${receivedAmount} ${destinationTokenSymbol}`
+        const verb = sourceChainSymbol === 'ALG' ? 'Sent' : 'Received'
+        return `${verb} ${receivedAmount} ${destinationTokenSymbol}`
       }
       return 'Bridge: Complete!'
     }
@@ -258,6 +262,7 @@ function MinimizedBridgeWidget() {
     bridge.error,
     bridge.receivedAmount,
     bridge.destinationToken?.symbol ?? null,
+    bridge.sourceChain?.chainSymbol ?? null,
   )
 
   // Determine status dot color
@@ -275,11 +280,11 @@ function MinimizedBridgeWidget() {
       <div data-wallet-theme data-wallet-ui data-theme={dataTheme}>
         <div
           data-state={animationState}
-          className="fixed bottom-0 right-4 z-[98] flex items-center gap-2.5 rounded-t-2xl bg-[var(--wui-color-bg)] shadow-xl border border-b-0 border-[var(--wui-color-border)] px-4 py-3 transition-all duration-150 ease-in-out data-[state=starting]:opacity-0 data-[state=starting]:translate-y-4 data-[state=entered]:opacity-100 data-[state=entered]:translate-y-0"
+          className="fixed bottom-0 right-4 z-[98] flex items-center gap-2.5 rounded-t-2xl bg-[var(--wui-color-bg)] shadow-xl border border-b-0 border-[var(--wui-color-border)] px-4 py-3 transition-all duration-150 ease-in-out data-[state=starting]:opacity-0 data-[state=starting]:translate-y-4 data-[state=entered]:opacity-100 data-[state=entered]:translate-y-0 max-w-[90vw] min-w-0"
         >
           <button
             onClick={restoreBridge}
-            className="flex items-center gap-2.5 cursor-pointer hover:brightness-95 transition-all"
+            className="flex items-center gap-2.5 cursor-pointer hover:brightness-95 transition-all min-w-0"
             title="Show bridge dialog"
           >
             <div className="relative">
@@ -297,7 +302,7 @@ function MinimizedBridgeWidget() {
                 }`}
               />
             </div>
-            <span className="text-sm font-medium text-[var(--wui-color-text)] whitespace-nowrap">{title}</span>
+            <span className="text-sm font-medium text-[var(--wui-color-text)] truncate">{title}</span>
           </button>
           {/* Close button for success/error/idle states */}
           {!isProcessing && (

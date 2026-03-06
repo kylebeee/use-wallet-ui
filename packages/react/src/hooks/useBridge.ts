@@ -54,6 +54,7 @@ export type BridgeStatus =
   | 'quoting'
   | 'permit-signing'
   | 'approving'
+  | 'bundling'
   | 'signing'
   | 'sending'
   | 'opting-in'
@@ -201,7 +202,6 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
   const [waitingSince, setWaitingSince] = useState<number | null>(null)
   const [transferStatus, setTransferStatus] = useState<TransferStatusResponse | null>(null)
   // Direct source chain confirmation counts (independent of Allbridge indexing lag)
-  const [sourceConfirmedRound, setSourceConfirmedRound] = useState<number | null>(null)
   const [localSendConfirmations, setLocalSendConfirmations] = useState<number>(0)
 
   // Opt-in state
@@ -346,7 +346,6 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
 
   useEffect(() => {
     if (!enabled) return
-    if (!isLiquidEvm && !activeAddress) return
     if (sdkRef.current && allChains.length > 0) return // already initialized
 
     let cancelled = false
@@ -382,7 +381,8 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
             setSelectedSourceChainSymbol(firstEvm.chainSymbol)
             setSelectedSourceTokenSymbol(firstEvm.tokens[0].symbol)
           }
-          // Auto-select first ALG token as destination
+          // EVM→ALG: destination is always ALG (null = default to 'ALG')
+          setSelectedDestChainSymbol(null)
           const algChain = chainList.find((c) => c.chainSymbol === 'ALG')
           if (algChain && algChain.tokens.length > 0) {
             setSelectedDestTokenSymbol(algChain.tokens[0].symbol)
@@ -413,7 +413,7 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     return () => {
       cancelled = true
     }
-  }, [enabled, isLiquidEvm, activeAddress]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // -- Fetch EVM token balances when evmAddress and chains are available --
 
@@ -700,10 +700,12 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
   // -- Transfer status polling --
 
   useEffect(() => {
+    console.log('[useBridge] transfer status poll effect: status=%s sourceTxId=%s chain=%s', status, sourceTxId, selectedSourceChainSymbol)
     if (status !== 'waiting' || !sourceTxId || !selectedSourceChainSymbol) return
     const sdk = sdkRef.current
     if (!sdk) return
 
+    console.log('[useBridge] starting transfer status poll for txId=%s chain=%s', sourceTxId, selectedSourceChainSymbol)
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -728,8 +730,8 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
             queryClient.invalidateQueries({ queryKey: ['account-balance'] })
             return
           }
-        } catch {
-          // Ignore polling errors, keep trying
+        } catch (pollErr) {
+          console.warn('[useBridge] transferStatus poll error:', pollErr)
         }
 
         // Wait 5 seconds between polls
@@ -747,32 +749,14 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     return () => controller.abort()
   }, [status, sourceTxId, selectedSourceChainSymbol])
 
-  // -- Direct source chain confirmation polling --
-  // Runs in parallel with Allbridge polling to provide real-time confirmation counts.
-  // Uses Math.max in the return value to show whichever is higher.
+  // -- EVM source chain confirmation polling --
+  // Tracks EVM block confirmations in parallel with Allbridge API polling.
 
   useEffect(() => {
     if (status !== 'waiting' || !sourceTxId || !selectedSourceChainSymbol) return
+    if (sourceIsAlgorand) return // Algorand confirmations counted inline in handleAlgorandBridge
 
     const controller = new AbortController()
-
-    const pollAlgorand = async () => {
-      if (!sourceConfirmedRound || !algodClient) return
-      // Use statusAfterBlock for block-by-block confirmation tracking — this
-      // is the native algod pattern and avoids arbitrary polling intervals.
-      let currentRound = BigInt(sourceConfirmedRound)
-      while (!controller.signal.aborted) {
-        try {
-          const blockStatus = await algodClient.statusAfterBlock(currentRound).do()
-          if (controller.signal.aborted) return
-          currentRound = BigInt(Number(blockStatus.lastRound))
-          setLocalSendConfirmations(Number(currentRound) - sourceConfirmedRound + 1)
-        } catch {
-          if (controller.signal.aborted) return
-          await new Promise<void>((resolve) => setTimeout(resolve, 1000))
-        }
-      }
-    }
 
     const pollEvm = async () => {
       const rpcUrl = DEFAULT_RPC_URLS[selectedSourceChainSymbol]
@@ -821,14 +805,10 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
       }
     }
 
-    if (sourceIsAlgorand) {
-      pollAlgorand()
-    } else {
-      pollEvm()
-    }
+    pollEvm()
 
     return () => controller.abort()
-  }, [status, sourceTxId, sourceIsAlgorand, sourceConfirmedRound, algodClient, selectedSourceChainSymbol])
+  }, [status, sourceTxId, sourceIsAlgorand, selectedSourceChainSymbol])
 
   // -- Cleanup: switch back to Algorand chain on unmount --
 
@@ -861,7 +841,7 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     userHasSelectedChainRef.current = false
     setExtraGasAmount(null)
     setExtraGasAlgo(null)
-    setSourceConfirmedRound(null)
+
     setLocalSendConfirmations(0)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1036,7 +1016,7 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     setOptInSigned(false)
     setOptInConfirmed(false)
     setWatchingForFunding(false)
-    setSourceConfirmedRound(null)
+
     setLocalSendConfirmations(0)
 
     try {
@@ -1124,14 +1104,17 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
       if (signedBytes.length === 0) throw new Error('No signed transactions returned')
 
       const { txid } = await algodClient.sendRawTransaction(signedBytes).do()
-      // Wait for confirmation using whichever txid we have
+      // Wait for initial confirmation using whichever txid we have
       const confirmTxId = appCallTxId ?? txid
       const txInfo = await algosdk.waitForConfirmation(algodClient, confirmTxId, 4)
       const confirmedRound = Number((txInfo as unknown as Record<string, unknown>)['confirmed-round'])
-      setSourceConfirmedRound(confirmedRound)
 
       // Use the app call txid for status tracking (Allbridge expects it)
       setSourceTxId(confirmTxId)
+
+      // Algorand has instant finality — 1 confirmation is sufficient.
+      setLocalSendConfirmations(1)
+
       setStatus('waiting')
       setWaitingSince(Date.now())
 
@@ -1158,6 +1141,11 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     const srcSdkToken = resolveSourceSdkToken()
     const dstSdkToken = resolveDestSdkToken()
 
+    console.log('[useBridge] handleEvmBridge tokens', {
+      src: { chainSymbol: srcSdkToken?.chainSymbol, symbol: srcSdkToken?.symbol, tokenAddress: srcSdkToken?.tokenAddress },
+      dst: { chainSymbol: dstSdkToken?.chainSymbol, symbol: dstSdkToken?.symbol, tokenAddress: dstSdkToken?.tokenAddress },
+    })
+
     if (!sdk || !srcSdkToken || !dstSdkToken || !activeWallet || !algorandAddress || !evmAddress || !amount) {
       return
     }
@@ -1179,7 +1167,7 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     setOptInSigned(false)
     setOptInConfirmed(false)
     setWatchingForFunding(false)
-    setSourceConfirmedRound(null)
+
     setLocalSendConfirmations(0)
 
     try {
@@ -1217,7 +1205,7 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
       // 4. Switch to source EVM chain (skip if already there)
       setStatus('approving')
       if (sourceChainData?.chainId && !onSourceEvmChain) {
-        await switchToEvmChain(evmProvider, sourceChainData.chainId)
+        await switchToEvmChain(evmProvider, '0x' + BigInt(sourceChainData.chainId).toString(16))
       }
 
       // 5. Fees are inclusive: the user's input amount is the total they spend.
@@ -1226,35 +1214,76 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
       const useStablecoin = !!stableFee
       const bridgeAmount = amount
 
-      // 6. Build and send approval transaction (EVM tokens need allowance)
+      // 5b. Pre-flight: check if wallet supports wallet_sendCalls on this chain.
+      //     We must know this BEFORE deciding approval strategy so we don't sign
+      //     an offline EIP-2612 permit only to discover batching isn't supported.
+      let canBatch = false
+      try {
+        const chainIdHexForCaps = sourceChainData?.chainId
+          ? '0x' + BigInt(sourceChainData.chainId).toString(16)
+          : undefined
+        const caps = (await evmProvider.request({
+          method: 'wallet_getCapabilities',
+          params: [evmAddress],
+        })) as
+          | Record<
+              string,
+              {
+                atomicBatch?: { supported?: boolean } // EIP-5792 draft
+                atomic?: { status?: string } // MetaMask Mobile (status: "ready" | "supported")
+              }
+            >
+          | undefined
+        console.log('[useBridge] wallet_getCapabilities', JSON.stringify(caps, null, 2))
+        if (caps && chainIdHexForCaps) {
+          const chainCaps = caps[chainIdHexForCaps] ?? caps[chainIdHexForCaps.toLowerCase()] ?? caps[chainIdHexForCaps.toUpperCase()]
+          canBatch =
+            chainCaps?.atomicBatch?.supported === true ||
+            chainCaps?.atomic?.status === 'ready' ||
+            chainCaps?.atomic?.status === 'supported'
+        }
+      } catch (capsErr) {
+        console.log('[useBridge] wallet_getCapabilities not supported:', capsErr)
+        canBatch = false
+      }
+      console.log('[useBridge] canBatch:', canBatch)
+
+      // 6. Check allowance; build approval calldata if needed (no submission yet).
+      //    For EIP-2612 tokens (only when canBatch): sign offline to bundle with bridge tx.
+      //    For standard ERC-20 (or when canBatch=false): build approve calldata.
       const hasAllowance = await sdk.bridge.checkAllowance({
         token: srcSdkToken,
         owner: evmAddress,
         amount: bridgeAmount,
       })
 
+      let approvalCall: { to: string; data: string } | null = null
+
       if (!hasAllowance) {
-        // rawTxBuilder.approve expects an integer amount (smallest token units).
-        // Passing a float (e.g. "10.5") causes bn.js to throw "Invalid character".
+        // rawTxBuilder.approve expects integer smallest-unit amount.
         const approveAmountInt = floatToSmallestUnit(bridgeAmount, srcSdkToken.decimals)
-        const approveTx = await sdk.bridge.rawTxBuilder.approve({
+        const approveTx = (await sdk.bridge.rawTxBuilder.approve({
           token: srcSdkToken,
           owner: evmAddress,
           amount: approveAmountInt,
-        })
+        })) as { to: string; data: string }
 
-        const spenderAddress = extractSpenderFromApproveTx(approveTx as { data: string })
+        const spenderAddress = extractSpenderFromApproveTx(approveTx)
         const chainIdBig = sourceChainData?.chainId ? BigInt(sourceChainData.chainId) : undefined
 
-        const permitCheck = chainIdBig
-          ? await detectEip2612(srcSdkToken.tokenAddress, evmAddress, evmProvider)
-          : { supported: false as const }
+        // EIP-2612 permit requires its own wallet interaction (eth_signTypedData_v4),
+        // so it does NOT reduce prompts when canBatch=true — the batch already
+        // handles approve+bridge in one prompt with a standard approve calldata.
+        // Only attempt permit when canBatch=false (future: permitAndBridge in one tx).
+        const permitCheck =
+          !canBatch && chainIdBig
+            ? await detectEip2612(srcSdkToken.tokenAddress, evmAddress, evmProvider)
+            : { supported: false as const }
 
         if (permitCheck.supported && permitCheck.nonce !== undefined) {
-          // EIP-2612 path: gasless sign → permit tx → bridge tx (no polling wait)
+          // EIP-2612: sign offline — calldata will be bundled with the bridge tx
           setStatus('permit-signing')
           const deadline = BigInt(Math.floor(Date.now() / 1000) + 600) // 10 min
-
           const permitSig = await buildPermitSignature({
             provider: evmProvider,
             tokenAddress: srcSdkToken.tokenAddress,
@@ -1265,57 +1294,22 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
             deadline,
             chainId: chainIdBig!,
           })
-
-          const permitCalldata = encodePermitCalldata({
-            owner: evmAddress,
-            spender: spenderAddress,
-            value: BigInt(approveAmountInt),
-            deadline,
-            ...permitSig,
-          })
-
-          setStatus('approving')
-          const permitHash = (await evmProvider.request({
-            method: 'eth_sendTransaction',
-            params: [{ from: evmAddress, to: srcSdkToken.tokenAddress, data: permitCalldata }],
-          })) as string
-
-          // Wait for the permit tx to mine so the allowance is on-chain before
-          // we build and estimate the bridge tx (estimation runs against current state).
-          let permitReceipt: unknown = null
-          while (!permitReceipt) {
-            permitReceipt = await evmProvider.request({
-              method: 'eth_getTransactionReceipt',
-              params: [permitHash],
-            })
-            if (!permitReceipt) {
-              await new Promise((r) => setTimeout(r, 2000))
-            }
+          approvalCall = {
+            to: srcSdkToken.tokenAddress,
+            data: encodePermitCalldata({
+              owner: evmAddress,
+              spender: spenderAddress,
+              value: BigInt(approveAmountInt),
+              deadline,
+              ...permitSig,
+            }),
           }
         } else {
-          // Sequential fallback: standard approve → poll → bridge
-          setStatus('approving')
-          const approveHash = (await evmProvider.request({
-            method: 'eth_sendTransaction',
-            params: [approveTx],
-          })) as string
-
-          // Wait for approval tx to be mined before building the send tx
-          let approveReceipt: unknown = null
-          while (!approveReceipt) {
-            approveReceipt = await evmProvider.request({
-              method: 'eth_getTransactionReceipt',
-              params: [approveHash],
-            })
-            if (!approveReceipt) {
-              await new Promise((r) => setTimeout(r, 2000))
-            }
-          }
+          approvalCall = { to: approveTx.to, data: approveTx.data }
         }
       }
 
-      // 7. Build and send bridge transaction
-      setStatus('signing')
+      // 7. Build bridge transaction
       const sendParams = {
         amount: bridgeAmount,
         fromAccountAddress: evmAddress,
@@ -1344,34 +1338,132 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
       }
       console.log('[Allbridge] EVM rawTx', JSON.stringify(rawTx, null, 2))
 
-      // The Allbridge SDK returns `value` as a decimal string (designed for web3.js),
-      // but EIP-1193 `eth_sendTransaction` expects hex-encoded quantities.
-      // Without conversion, MetaMask interprets the decimal string as hex, inflating the fee.
-      const eip1193Tx = {
-        ...rawTx,
-        value: rawTx.value ? '0x' + BigInt(rawTx.value).toString(16) : undefined,
-      }
+      // Allbridge SDK returns value as decimal string; EIP-1193 expects hex.
+      const bridgeTxValue = rawTx.value ? '0x' + BigInt(rawTx.value).toString(16) : '0x0'
+      const eip1193Tx = { ...rawTx, value: bridgeTxValue }
 
-      // Estimate gas per Allbridge EVM docs — wallets usually handle this,
-      // but explicit estimation is more robust across wallet implementations.
-      try {
-        const gasEstimate = await evmProvider.request({
-          method: 'eth_estimateGas',
-          params: [eip1193Tx],
-        })
-        if (gasEstimate) {
-          ;(eip1193Tx as Record<string, unknown>).gas = gasEstimate
+      // 8. Submit: bundle approval + bridge via wallet_sendCalls (single popup),
+      //    falling back to sequential eth_sendTransaction if canBatch=false or unsupported.
+      setStatus(approvalCall ? (canBatch ? 'bundling' : 'approving') : 'signing')
+      let txHash: string
+
+      if (approvalCall) {
+        let usedBundle = false
+        try {
+          if (!canBatch) throw Object.assign(new Error('Batching not supported'), { code: 4200 })
+
+          const chainIdHex = sourceChainData?.chainId
+            ? '0x' + BigInt(sourceChainData.chainId).toString(16)
+            : undefined
+          const sendCallsParams = {
+            // IMPORTANT: MetaMask requires exactly '2.0.0' — do NOT change to '2.0'.
+            // MetaMask rejects '2.0' with "Version not supported: Got 2.0, expected 2.0.0".
+            version: '2.0.0',
+            from: evmAddress,
+            chainId: chainIdHex,
+            atomicRequired: false,
+            calls: [
+              { to: approvalCall.to, data: approvalCall.data },
+              { to: eip1193Tx.to, data: eip1193Tx.data, value: bridgeTxValue },
+            ],
+          }
+          console.log('[useBridge] wallet_sendCalls params', JSON.stringify(sendCallsParams, null, 2))
+
+          const bundleIdRaw = await evmProvider.request({
+            method: 'wallet_sendCalls',
+            params: [sendCallsParams],
+          })
+          console.log('[useBridge] wallet_sendCalls raw response type=%s value=%s', typeof bundleIdRaw, JSON.stringify(bundleIdRaw))
+          // MetaMask returns { id: '0x...' } instead of a bare string per EIP-5792 spec.
+          const bundleId =
+            bundleIdRaw && typeof bundleIdRaw === 'object' && 'id' in (bundleIdRaw as object)
+              ? (bundleIdRaw as { id: string }).id
+              : (bundleIdRaw as string)
+          usedBundle = true
+          console.log('[useBridge] wallet_sendCalls bundleId type=%s value=%s', typeof bundleId, bundleId)
+
+          setStatus('sending')
+
+          // Poll wallet_getCallsStatus until the bundle is mined
+          console.log('[useBridge] wallet_getCallsStatus polling with bundleId type=%s value=%s', typeof bundleId, bundleId)
+          while (true) {
+            const callsStatus = (await evmProvider.request({
+              method: 'wallet_getCallsStatus',
+              params: [bundleId],
+            })) as {
+              status: string | number  // EIP-5792 spec: string ('CONFIRMED'/'FAILED'); MetaMask: HTTP number (200/500)
+              receipts?: Array<{ transactionHash: string; status: string }>
+            }
+            console.log('[useBridge] wallet_getCallsStatus', JSON.stringify(callsStatus, null, 2))
+
+            console.log('[useBridge] wallet_getCallsStatus raw status=%s receipts=%s', callsStatus.status, JSON.stringify(callsStatus.receipts))
+            // MetaMask returns HTTP-style numeric status (200 = confirmed, 4xx/5xx = failed)
+            // EIP-5792 spec uses string 'CONFIRMED'/'FAILED'
+            const isConfirmed = callsStatus.status === 'CONFIRMED' || callsStatus.status === 'confirmed' || callsStatus.status === 200
+            const isFailed = callsStatus.status === 'FAILED' || callsStatus.status === 'failed' || (typeof callsStatus.status === 'number' && callsStatus.status >= 400)
+            if (isConfirmed) {
+              const receipts = callsStatus.receipts ?? []
+              console.log('[useBridge] bundle CONFIRMED receipts count=%d', receipts.length, JSON.stringify(receipts))
+              const bridgeReceipt = receipts[receipts.length - 1]
+              if (!bridgeReceipt) throw new Error('Bundle receipts missing')
+              if (bridgeReceipt.status === '0x0') throw new Error('Bridge transaction reverted')
+              txHash = bridgeReceipt.transactionHash
+              console.log('[useBridge] bundle txHash=%s', txHash)
+              break
+            }
+            if (isFailed) throw new Error('Bundle transaction failed')
+
+            await new Promise((r) => setTimeout(r, 2000))
+          }
+        } catch (bundleErr) {
+          const code = (bundleErr as { code?: number }).code
+          console.log('[useBridge] wallet_sendCalls failed (usedBundle=%s, code=%s):', usedBundle, code, bundleErr)
+          // Do not fall back if: bundle was already submitted, or user explicitly rejected (4001)
+          if (usedBundle || code === 4001) throw bundleErr
+
+          // Sequential fallback: submit approval, wait for mining, then bridge
+          console.log('[useBridge] sequential fallback: eth_sendTransaction approval params', JSON.stringify({ from: evmAddress, to: approvalCall.to, data: approvalCall.data }))
+          const approvalHash = (await evmProvider.request({
+            method: 'eth_sendTransaction',
+            params: [{ from: evmAddress, to: approvalCall.to, data: approvalCall.data }],
+          })) as string
+
+          let approvalReceipt: unknown = null
+          while (!approvalReceipt) {
+            approvalReceipt = await evmProvider.request({
+              method: 'eth_getTransactionReceipt',
+              params: [approvalHash],
+            })
+            if (!approvalReceipt) await new Promise((r) => setTimeout(r, 2000))
+          }
+
+          setStatus('signing')
+          const gasEstimate = await evmProvider
+            .request({ method: 'eth_estimateGas', params: [eip1193Tx] })
+            .catch(() => undefined)
+          if (gasEstimate) (eip1193Tx as Record<string, unknown>).gas = gasEstimate
+
+          setStatus('sending')
+          txHash = (await evmProvider.request({
+            method: 'eth_sendTransaction',
+            params: [eip1193Tx],
+          })) as string
         }
-      } catch {
-        // Fall back to wallet-estimated gas if estimation fails
+      } else {
+        // No approval needed — single bridge tx
+        const gasEstimate = await evmProvider
+          .request({ method: 'eth_estimateGas', params: [eip1193Tx] })
+          .catch(() => undefined)
+        if (gasEstimate) (eip1193Tx as Record<string, unknown>).gas = gasEstimate
+
+        setStatus('sending')
+        txHash = (await evmProvider.request({
+          method: 'eth_sendTransaction',
+          params: [eip1193Tx],
+        })) as string
       }
 
-      setStatus('sending')
-      const txHash = (await evmProvider.request({
-        method: 'eth_sendTransaction',
-        params: [eip1193Tx],
-      })) as string
-
+      console.log('[useBridge] setSourceTxId:', txHash, 'optInCheck:', JSON.stringify(optInCheck))
       setSourceTxId(txHash)
 
       // 8. If opt-in needed and we were already on the source EVM chain,
@@ -1460,12 +1552,15 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
           ...transferStatus,
           send: {
             confirmations: Math.max(transferStatus.send?.confirmations ?? 0, localSendConfirmations),
-            confirmationsNeeded: transferStatus.send?.confirmationsNeeded ?? sourceConfirmationsNeeded ?? 0,
+            confirmationsNeeded: sourceIsAlgorand ? 1 : (transferStatus.send?.confirmationsNeeded ?? sourceConfirmationsNeeded ?? 0),
           },
         }
       : localSendConfirmations > 0 && sourceConfirmationsNeeded != null
         ? ({
-            send: { confirmations: localSendConfirmations, confirmationsNeeded: sourceConfirmationsNeeded },
+            send: {
+              confirmations: localSendConfirmations,
+              confirmationsNeeded: sourceIsAlgorand ? 1 : sourceConfirmationsNeeded,
+            },
             signaturesCount: 0,
             signaturesNeeded: 0,
             receive: null,

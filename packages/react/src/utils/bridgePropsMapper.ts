@@ -67,6 +67,7 @@ export function mapBridgeToPanelProps(
     status: bridge.status,
     error: bridge.error,
     sourceTxId: bridge.sourceTxId,
+    destinationTxId: bridge.transferStatus?.receive?.txId ?? null,
     onBridge: bridge.handleBridge,
     onReset: bridge.reset,
     onRetry: bridge.retry,

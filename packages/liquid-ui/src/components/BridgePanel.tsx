@@ -24,6 +24,7 @@ export type BridgeStatusValue =
   | 'quoting'
   | 'permit-signing'
   | 'approving'
+  | 'bundling'
   | 'signing'
   | 'sending'
   | 'opting-in'
@@ -82,6 +83,8 @@ export interface BridgePanelProps {
   status: BridgeStatusValue
   error: string | null
   sourceTxId: string | null
+  destinationTxId?: string | null
+  destinationChainSymbol?: string | null
 
   // Actions
   onBridge: () => void
@@ -176,6 +179,7 @@ export function BridgePanel({
   status,
   error,
   sourceTxId,
+  destinationTxId,
   onBridge,
   onReset,
   onRetry,
@@ -200,6 +204,7 @@ export function BridgePanel({
   const isProcessing =
     status === 'permit-signing' ||
     status === 'approving' ||
+    status === 'bundling' ||
     status === 'signing' ||
     status === 'sending' ||
     status === 'opting-in' ||
@@ -427,14 +432,16 @@ export function BridgePanel({
       )}
 
       {/* Processing states */}
-      {(status === 'permit-signing' || status === 'approving' || status === 'signing') && (
+      {(status === 'permit-signing' || status === 'approving' || status === 'bundling' || status === 'signing') && (
         <div className="flex items-center justify-center py-6 text-sm text-[var(--wui-color-text-secondary)]">
           <Spinner className="h-4 w-4 mr-2" />
           {status === 'permit-signing'
             ? 'Signing permit…'
             : status === 'approving'
-              ? 'Approving token'
-              : 'Confirm in wallet'}
+              ? 'Approving token…'
+              : status === 'bundling'
+                ? 'Confirm approval + bridge in wallet…'
+                : 'Confirm in wallet'}
         </div>
       )}
 
@@ -492,6 +499,26 @@ export function BridgePanel({
             <p className="mt-1.5 text-xs text-[var(--wui-color-text-tertiary)] flex items-center justify-center gap-1">
               TX: <span className="font-mono">{formatShortAddr(sourceTxId)}</span>
               <CopyButton text={sourceTxId} variant="icon" title="Copy transaction ID" />
+            </p>
+          )}
+          {destinationTxId && (
+            <p className="mt-1 text-xs text-[var(--wui-color-text-tertiary)] flex items-center justify-center gap-1">
+              Destination TX:{' '}
+              {destinationChainSymbol === 'ALG' ? (
+                <a
+                  href={`https://allo.info/tx/${destinationTxId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[var(--wui-color-primary)] hover:underline"
+                >
+                  {formatShortAddr(destinationTxId)}
+                </a>
+              ) : (
+                <>
+                  <span className="font-mono">{formatShortAddr(destinationTxId)}</span>
+                  <CopyButton text={destinationTxId} variant="icon" title="Copy destination transaction ID" />
+                </>
+              )}
             </p>
           )}
           <button onClick={onReset} className="mt-3 text-sm text-[var(--wui-color-primary)] hover:underline">
@@ -586,8 +613,8 @@ function BridgeProgress({
   optInConfirmed,
   sourceTxId,
 }: BridgeProgressProps) {
-  const sendDone = transferStatus != null && transferStatus.sendConfirmations >= transferStatus.sendConfirmationsNeeded
-  const sigsDone = transferStatus != null && transferStatus.signaturesCount >= transferStatus.signaturesNeeded
+  const sendDone = transferStatus != null && transferStatus.sendConfirmationsNeeded > 0 && transferStatus.sendConfirmations >= transferStatus.sendConfirmationsNeeded
+  const sigsDone = transferStatus != null && transferStatus.signaturesNeeded > 0 && transferStatus.signaturesCount >= transferStatus.signaturesNeeded
   const receiveDone =
     transferStatus?.receiveConfirmations != null &&
     transferStatus.receiveConfirmationsNeeded != null &&
