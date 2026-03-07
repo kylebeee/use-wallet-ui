@@ -1,4 +1,5 @@
 import { getDefaultConfig as rkGetDefaultConfig } from '@rainbow-me/rainbowkit'
+import { mainnet } from 'wagmi/chains'
 import {
   safeWallet,
   rainbowWallet,
@@ -54,19 +55,58 @@ function clearStaleWcPairings(): void {
 }
 
 /**
- * Like RainbowKit's `getDefaultConfig`, but excludes the Base Account wallet
- * from the default wallet list. Pass an explicit `wallets` array to override.
+ * Like RainbowKit's `getDefaultConfig`, but with mobile WalletConnect fixes
+ * applied by default:
  *
- * Import from `@txnlab/use-wallet-ui-react/rainbowkit` instead of
- * `@rainbow-me/rainbowkit` — all other options are identical.
+ * - Excludes the Base Account wallet from the default wallet list (pass an
+ *   explicit `wallets` array to override).
+ * - Clears stale WalletConnect v2 pairing data to prevent "No matching key"
+ *   relay errors on mobile wallets.
+ * - Ensures Ethereum mainnet is always included in the chain list so that
+ *   WalletConnect v2 session negotiation succeeds with MetaMask Mobile (which
+ *   may reject or silently drop sessions that only contain unknown chain IDs
+ *   like Algorand's 4160).
+ * - Sets `walletConnectParameters.metadata.redirect.universal` to the current
+ *   origin so that MetaMask Mobile redirects back to the browser tab after
+ *   signing, allowing the WalletConnect relay response to be delivered.
  *
- * Also clears stale WalletConnect v2 pairing data to prevent mobile wallet
- * connection issues ("No matching key" relay errors).
+ * All defaults can be overridden by the caller.
  */
 export const getDefaultConfig: typeof rkGetDefaultConfig = (params) => {
   clearStaleWcPairings()
-  const appUrl = (params as { appUrl?: string }).appUrl ?? (typeof window !== 'undefined' ? window.location.origin : undefined)
-  return rkGetDefaultConfig({ wallets: DEFAULT_WALLETS, ...params, ...(appUrl ? { appUrl } : {}) })
+
+  const p = params as Record<string, any>
+  const appUrl: string | undefined = p.appUrl ?? (typeof window !== 'undefined' ? window.location.origin : undefined)
+
+  // Ensure mainnet is in the chain list for WC session namespace compatibility.
+  const userChains: any[] = p.chains ?? []
+  const chains = userChains.some((c) => c.id === mainnet.id)
+    ? userChains
+    : [mainnet, ...userChains]
+
+  // Default mobile redirect so MetaMask Mobile returns to the browser tab.
+  const redirectUrl: string | undefined = typeof window !== 'undefined' ? window.location.origin : undefined
+  const userWcMeta = p.walletConnectParameters?.metadata ?? {}
+  const walletConnectParameters = redirectUrl
+    ? {
+        ...p.walletConnectParameters,
+        metadata: {
+          ...userWcMeta,
+          redirect: {
+            universal: redirectUrl,
+            ...userWcMeta.redirect,
+          },
+        },
+      }
+    : p.walletConnectParameters
+
+  return rkGetDefaultConfig({
+    wallets: DEFAULT_WALLETS,
+    ...params,
+    chains: chains as any,
+    ...(appUrl ? { appUrl } : {}),
+    ...(walletConnectParameters ? { walletConnectParameters } : {}),
+  })
 }
 
 // Backward-compatible exports
