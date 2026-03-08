@@ -91,6 +91,7 @@ export const getDefaultConfig: typeof rkGetDefaultConfig = (params) => {
     ? {
         ...p.walletConnectParameters,
         metadata: {
+          icons: [],
           ...userWcMeta,
           redirect: {
             universal: redirectUrl,
