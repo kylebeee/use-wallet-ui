@@ -63,9 +63,7 @@ function clearStaleWcPairings(): void {
  * - Clears stale WalletConnect v2 pairing data to prevent "No matching key"
  *   relay errors on mobile wallets.
  * - Ensures Ethereum mainnet is always included in the chain list so that
- *   WalletConnect v2 session negotiation succeeds with MetaMask Mobile (which
- *   may reject or silently drop sessions that only contain unknown chain IDs
- *   like Algorand's 4160).
+ *   WalletConnect v2 session negotiation succeeds with MetaMask Mobile.
  * - Sets `walletConnectParameters.metadata.redirect.universal` to the current
  *   origin so that MetaMask Mobile redirects back to the browser tab after
  *   signing, allowing the WalletConnect relay response to be delivered.
