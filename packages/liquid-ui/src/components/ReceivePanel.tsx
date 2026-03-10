@@ -28,6 +28,7 @@ export interface ReceivePanelProps {
   onSelectNameAsset?: (asset: CachedAsset) => void
   isNameMode?: boolean
   evmAddress?: string | null
+  onOptOut?: (assetIndex: number) => void
 }
 
 export function ReceivePanel({
@@ -53,6 +54,7 @@ export function ReceivePanel({
   onSelectNameAsset,
   isNameMode,
   evmAddress,
+  onOptOut,
 }: ReceivePanelProps) {
   const [evmExpanded, setEvmExpanded] = useState(false)
 
@@ -187,6 +189,7 @@ export function ReceivePanel({
               index={assetInfo.index}
               isAlreadyOptedIn={isAlreadyOptedIn}
               onOptIn={handleOptIn}
+              onOptOut={onOptOut}
             />
           )}
 
@@ -244,6 +247,7 @@ export function ReceivePanel({
               peraVerified={selectedNameAsset.peraVerified}
               isAlreadyOptedIn={isAlreadyOptedIn}
               onOptIn={handleOptIn}
+              onOptOut={onOptOut}
             />
           )}
         </>
@@ -289,6 +293,7 @@ function AssetCard({
   peraVerified,
   isAlreadyOptedIn,
   onOptIn,
+  onOptOut,
 }: {
   name: string
   unitName?: string
@@ -296,6 +301,7 @@ function AssetCard({
   peraVerified?: boolean
   isAlreadyOptedIn?: boolean
   onOptIn: () => void
+  onOptOut?: (assetIndex: number) => void
 }) {
   return (
     <div className="bg-[var(--wui-color-bg-secondary)] rounded-lg p-3">
@@ -310,7 +316,17 @@ function AssetCard({
         <span className="text-xs text-[var(--wui-color-text-secondary)]">ID: {index}</span>
       </div>
       {isAlreadyOptedIn ? (
-        <p className="text-xs text-[var(--wui-color-text-secondary)] text-center py-1">Already opted in — no action needed.</p>
+        <div className="text-center">
+          <p className="text-xs text-[var(--wui-color-text-secondary)] py-1">Already opted in — no action needed.</p>
+          {onOptOut && (
+            <button
+              onClick={() => onOptOut(index)}
+              className="mt-2 w-full py-2 px-4 border border-[var(--wui-color-border)] text-[var(--wui-color-text-secondary)] font-medium rounded-xl hover:brightness-90 transition-all text-sm"
+            >
+              Opt out of {unitName || name}
+            </button>
+          )}
+        </div>
       ) : (
         <button
           onClick={onOptIn}

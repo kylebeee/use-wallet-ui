@@ -8,6 +8,7 @@ const MIN_TXN_FEE = 0.001
 const BASE_MBR = 0.1
 
 export interface SendPanelProps {
+  activeAddress?: string | null
   sendType: 'algo' | 'asa'
   setSendType: (type: 'algo' | 'asa') => void
   receiver: string
@@ -39,6 +40,7 @@ export interface SendPanelProps {
 }
 
 export function SendPanel({
+  activeAddress,
   sendType,
   setSendType,
   receiver,
@@ -162,11 +164,21 @@ export function SendPanel({
       (sendType === 'asa' && selectedAsset != null && parsedAmount > parseFloat(selectedAsset.amount)))
 
   // Full balance ASA send — show opt-out option
+  const isZeroAsaBalance = sendType === 'asa' && selectedAsset != null && parseFloat(selectedAsset.amount) === 0
   const isFullAsaAmount =
     sendType === 'asa' &&
     selectedAsset != null &&
     amount !== '' &&
     amount === selectedAsset.amount
+
+  // When opting out of a zero-balance asset, auto-fill receiver with self and set amount to 0
+  const isZeroBalanceOptOut = isZeroAsaBalance && optOut === true
+  useEffect(() => {
+    if (isZeroBalanceOptOut && activeAddress) {
+      setReceiver(activeAddress)
+      setAmount('0')
+    }
+  }, [isZeroBalanceOptOut, activeAddress, setReceiver, setAmount])
 
   const optOutLabel = selectedAsset?.unitName || selectedAsset?.name || assetInfo?.unitName || assetInfo?.name || 'this asset'
 
@@ -267,27 +279,29 @@ export function SendPanel({
             </>
           )}
 
-          {/* Receiver address */}
-          <div className="mb-3">
-            <input
-              type="text"
-              placeholder="Receiver ALGO address"
-              value={receiver}
-              onChange={(e) => setReceiver(e.target.value)}
-              className="w-full rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
-            />
-          </div>
+          {/* Receiver address (hidden for zero-balance opt-out) */}
+          {!isZeroBalanceOptOut && (
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="Receiver ALGO address"
+                value={receiver}
+                onChange={(e) => setReceiver(e.target.value)}
+                className="w-full rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
+              />
+            </div>
+          )}
 
           {/* Invalid receiver address */}
-          {receiverAddressError && <p className="mb-3 text-xs text-[var(--wui-color-danger-text)] break-words">{receiverAddressError}</p>}
+          {receiverAddressError && !isZeroBalanceOptOut && <p className="mb-3 text-xs text-[var(--wui-color-danger-text)] break-words">{receiverAddressError}</p>}
 
           {/* Receiver opt-in check feedback */}
-          {sendType === 'asa' && receiverOptInStatus === 'not-opted-in' && (
+          {sendType === 'asa' && receiverOptInStatus === 'not-opted-in' && !isZeroBalanceOptOut && (
             <p className="mb-3 text-xs text-[var(--wui-color-danger-text)]">Receiver has not opted into this asset</p>
           )}
 
-          {/* Opt-out checkbox (shown when sending full ASA balance) */}
-          {isFullAsaAmount && setOptOut && (
+          {/* Opt-out checkbox (shown when sending full ASA balance or zero-balance asset) */}
+          {(isFullAsaAmount || isZeroAsaBalance) && setOptOut && (
             <div className="mb-3">
               <label className="flex items-center gap-1.5 cursor-pointer select-none">
                 <input
@@ -299,8 +313,8 @@ export function SendPanel({
                 <span className="text-xs text-[var(--wui-color-text-secondary)]">Opt out of {optOutLabel}</span>
               </label>
               {optOut && (
-                <p className="mt-1 ml-5 text-xs text-[var(--wui-color-text-tertiary)]">
-                  You will not be able to receive {optOutLabel} until you opt back in.
+                <p className="mt-1 ml-5 text-xs text-[var(--wui-color-text-tertiary)] leading-relaxed">
+                  You will not be able to receive {optOutLabel} until you opt back in. 0.1Ⱥ available balance will be reclaimed.
                 </p>
               )}
             </div>
@@ -319,7 +333,7 @@ export function SendPanel({
             }
             className="w-full py-2.5 px-4 bg-[var(--wui-color-primary)] text-[var(--wui-color-primary-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {sendType === 'asa' && receiverOptInStatus === 'checking' ? 'Verifying' : `Send ${sendLabel}`}
+            {sendType === 'asa' && receiverOptInStatus === 'checking' ? 'Verifying' : isZeroBalanceOptOut ? `Opt out of ${optOutLabel}` : `Send ${sendLabel}`}
           </button>
         </>
       )}

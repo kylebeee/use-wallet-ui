@@ -17,6 +17,7 @@ function toBaseUnits(amount: string, decimals: number): number {
 export type ReceiverOptInStatus = 'idle' | 'checking' | 'opted-in' | 'not-opted-in'
 
 export interface UseSendReturn {
+  activeAddress: string | null
   sendType: 'algo' | 'asa'
   setSendType: (type: 'algo' | 'asa') => void
   receiver: string
@@ -176,6 +177,7 @@ export function useSend(): UseSendReturn {
   }, [sendType, amount, receiver, optOut, closeAlgoAccount, lookup.assetInfo, activeAddress, algodClient, signTransactions, queryClient])
 
   return {
+    activeAddress: activeAddress ?? null,
     sendType,
     setSendType,
     receiver,

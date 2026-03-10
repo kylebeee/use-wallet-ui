@@ -83,7 +83,17 @@ export function ManagePanel({
   if (mode === 'send' && send) {
     content = <SendPanel {...send} accountAssets={assets} totalBalance={totalBalance} availableBalance={availableBalance} onBack={() => goBack(send.reset)} />
   } else if (mode === 'opt-in' && optIn) {
-    content = <ReceivePanel {...optIn} onBack={() => goBack(optIn.reset)} />
+    const handleOptOut = send ? (assetIndex: number) => {
+      const asset = assets?.find((a) => a.assetId === assetIndex)
+      send.setSendType('asa')
+      send.setAssetIdInput(String(assetIndex))
+      if (asset) {
+        send.setAmount(asset.amount)
+      }
+      send.setOptOut?.(true)
+      goForward('send')
+    } : undefined
+    content = <ReceivePanel {...optIn} onOptOut={handleOptOut} onBack={() => goBack(optIn.reset)} />
   } else if (mode === 'bridge' && bridge) {
     content = <BridgePanel {...bridge} onBack={() => goBack(bridge.onReset)} />
   } else {
