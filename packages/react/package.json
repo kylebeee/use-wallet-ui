@@ -75,7 +75,7 @@
   },
   "peerDependencies": {
     "@allbridge/bridge-core-sdk": ">=3.0.0",
-    "@d13co/liquid-ui": "workspace:*",
+    "@d13co/algo-x-evm-ui": "workspace:*",
     "@rainbow-me/rainbowkit": ">=2.0.0",
     "@tanstack/react-query": ">=5.0.0",
     "@txnlab/use-wallet-react": "^4.0.1",

@@ -15,7 +15,7 @@
 */
 
 @import 'tailwindcss/theme.css';
-@source "../../liquid-ui/src";
+@source "../../algo-x-evm-ui/src";
 
 /*
   Minimal reset for library components only.

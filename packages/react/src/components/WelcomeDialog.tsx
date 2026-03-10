@@ -9,7 +9,7 @@ import {
   useId,
 } from '@floating-ui/react'
 import { useState } from 'react'
-import { WelcomeContent } from '@d13co/liquid-ui'
+import { WelcomeContent } from '@d13co/algo-x-evm-ui'
 
 import { useWalletUI } from '../providers/WalletUIProvider'
 import { useBridgeDialog } from '../providers/BridgeDialogProvider'

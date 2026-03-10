@@ -1,4 +1,4 @@
-import { type CachedAsset } from '@d13co/liquid-ui'
+import { type CachedAsset } from '@d13co/algo-x-evm-ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { type UseAssetRegistryReturn } from './useAssetRegistry'

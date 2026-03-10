@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@d13co/liquid-ui": "workspace:*",
+    "@d13co/algo-x-evm-ui": "workspace:*",
     "@tanstack/react-query": "5.90.21",
     "algosdk": "3.5.2",
     "react": "19.2.4",

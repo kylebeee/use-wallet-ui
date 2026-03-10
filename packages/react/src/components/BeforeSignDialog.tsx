@@ -10,8 +10,8 @@ import {
 } from '@floating-ui/react'
 import { useState } from 'react'
 import { getApplicationAddress } from 'algosdk'
-import { TransactionReview } from '@d13co/liquid-ui'
-import type { TransactionData, TransactionDanger, AssetLookupClient } from '@d13co/liquid-ui'
+import { TransactionReview } from '@d13co/algo-x-evm-ui'
+import type { TransactionData, TransactionDanger, AssetLookupClient } from '@d13co/algo-x-evm-ui'
 
 import { useWalletUI } from '../providers/WalletUIProvider'
 

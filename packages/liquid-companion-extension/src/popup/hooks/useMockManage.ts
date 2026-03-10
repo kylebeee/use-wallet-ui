@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { SendPanelProps, ReceivePanelProps } from '@d13co/liquid-ui'
+import type { SendPanelProps, ReceivePanelProps } from '@d13co/algo-x-evm-ui'
 
 type MockSendReturn = Omit<SendPanelProps, 'onBack'>
 type MockOptInReturn = Omit<ReceivePanelProps, 'onBack'>

@@ -1,7 +1,7 @@
 import { useNetwork, useWallet } from '@txnlab/use-wallet-react'
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { AbelGhostSDK } from 'abel-ghost-sdk'
-import { AssetCache, type CachedAsset } from '@d13co/liquid-ui'
+import { AssetCache, type CachedAsset } from '@d13co/algo-x-evm-ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const MAINNET_REGISTRY_APP_ID = 2914159523n

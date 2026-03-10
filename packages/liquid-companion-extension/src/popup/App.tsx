@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import algosdk from 'algosdk'
-import { ManagePanel } from '@d13co/liquid-ui'
+import { ManagePanel } from '@d13co/algo-x-evm-ui'
 import { useMockSend, useMockOptIn } from './hooks/useMockManage'
 import {
   MessageType,

@@ -1,4 +1,4 @@
-import type { TransactionDanger } from '@d13co/liquid-ui'
+import type { TransactionDanger } from '@d13co/algo-x-evm-ui'
 
 // Message type prefix
 export const MSG_PREFIX = 'LIQUID_WALLET_COMP_EXT_' as const

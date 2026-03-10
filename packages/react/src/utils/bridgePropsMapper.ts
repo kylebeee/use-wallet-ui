@@ -1,4 +1,4 @@
-import type { BridgePanelProps } from '@d13co/liquid-ui'
+import type { BridgePanelProps } from '@d13co/algo-x-evm-ui'
 import type { UseBridgeReturn } from '../hooks/useBridge'
 
 /**

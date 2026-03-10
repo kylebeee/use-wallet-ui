@@ -1,4 +1,4 @@
-import type { CachedAsset } from '@d13co/liquid-ui'
+import type { CachedAsset } from '@d13co/algo-x-evm-ui'
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useQueryClient } from '@tanstack/react-query'
 import algosdk from 'algosdk'

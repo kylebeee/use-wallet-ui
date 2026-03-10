@@ -18,7 +18,7 @@ import { QueryClientProvider, useIsFetching, useQueryClient } from '@tanstack/re
 import { formatNumber, formatShortAddress } from '@txnlab/utils-ts'
 import React, { ReactElement, RefObject, useState } from 'react'
 
-import { AlgoSymbol, ManagePanel, useAssets, type AssetHoldingDisplay } from '@d13co/liquid-ui'
+import { AlgoSymbol, ManagePanel, useAssets, type AssetHoldingDisplay } from '@d13co/algo-x-evm-ui'
 
 import { useAccountInfo } from '../hooks/useAccountInfo'
 import { useAssetRegistry } from '../hooks/useAssetRegistry'

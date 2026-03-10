@@ -8,7 +8,7 @@ import {
   useInteractions,
   useRole,
 } from '@floating-ui/react'
-import { BridgePanel } from '@d13co/liquid-ui'
+import { BridgePanel } from '@d13co/algo-x-evm-ui'
 import { useState, useEffect, useCallback } from 'react'
 
 import { useBridgeDialog } from '../providers/BridgeDialogProvider'

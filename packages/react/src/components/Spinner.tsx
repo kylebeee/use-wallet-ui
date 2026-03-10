@@ -1,1 +1,1 @@
-export { Spinner } from '@d13co/liquid-ui'
+export { Spinner } from '@d13co/algo-x-evm-ui'

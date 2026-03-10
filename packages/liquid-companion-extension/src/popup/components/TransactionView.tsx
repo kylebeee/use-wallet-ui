@@ -1,6 +1,6 @@
 import { getApplicationAddress } from 'algosdk'
-import { TransactionReview } from '@d13co/liquid-ui'
-import type { TransactionData, TransactionDanger, AssetLookupClient } from '@d13co/liquid-ui'
+import { TransactionReview } from '@d13co/algo-x-evm-ui'
+import type { TransactionData, TransactionDanger, AssetLookupClient } from '@d13co/algo-x-evm-ui'
 
 interface TransactionViewProps {
   transactions: TransactionData[]
