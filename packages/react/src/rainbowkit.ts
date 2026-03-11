@@ -185,32 +185,37 @@ export const getDefaultConfig = (params: Parameters<typeof rkGetDefaultConfig>[0
       })
 
       // Wrap getProvider to log all EIP-1193 request/response traffic.
-      // We temporarily restore the original `request` before calling it so that
-      // internal SDK calls (e.g. MetaMask SDK calling `this.request(...)`) do
-      // NOT recurse through our wrapper and overflow the stack.
+      // We return a Proxy instead of mutating provider.request so that
+      // MetaMask SDK's internal this.request calls stay on the untouched
+      // original provider and don't recurse through our logging layer.
       const origGetProvider = connector.getProvider.bind(connector)
+      let cachedProxy: any = null
+      let cachedTarget: any = null
       connector.getProvider = async (...args: any[]) => {
         const provider = await origGetProvider(...args)
-        if (provider && !(provider as any).__wuiDebugWrapped) {
-          const origRequest = provider.request
-          const wrappedRequest = async (req: { method: string; params?: unknown[] }) => {
-            provider.request = origRequest // restore original so internal SDK calls bypass wrapper
-            console.log(`[wagmi:rpc] >> ${connector.name} ${req.method}`, req.params ?? [])
-            try {
-              const result = await origRequest.call(provider, req)
-              console.log(`[wagmi:rpc] << ${connector.name} ${req.method}`, result)
-              return result
-            } catch (err) {
-              console.error(`[wagmi:rpc] ERR ${connector.name} ${req.method}`, err)
-              throw err
-            } finally {
-              provider.request = wrappedRequest // re-install wrapper for future external calls
+        if (!provider) return provider
+        // Re-use the same Proxy for the same underlying provider
+        if (cachedTarget === provider) return cachedProxy
+        cachedTarget = provider
+        cachedProxy = new Proxy(provider, {
+          get(target, prop, receiver) {
+            if (prop === 'request') {
+              return async (req: { method: string; params?: unknown[] }) => {
+                console.log(`[wagmi:rpc] >> ${connector.name} ${req.method}`, req.params ?? [])
+                try {
+                  const result = await target.request(req)
+                  console.log(`[wagmi:rpc] << ${connector.name} ${req.method}`, result)
+                  return result
+                } catch (err) {
+                  console.error(`[wagmi:rpc] ERR ${connector.name} ${req.method}`, err)
+                  throw err
+                }
+              }
             }
-          }
-          provider.request = wrappedRequest
-          ;(provider as any).__wuiDebugWrapped = true
-        }
-        return provider
+            return Reflect.get(target, prop, receiver)
+          },
+        })
+        return cachedProxy
       }
     }
   }
