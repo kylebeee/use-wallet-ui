@@ -1222,15 +1222,19 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
       // 5b. Pre-flight: check if wallet supports wallet_sendCalls on this chain.
       //     We must know this BEFORE deciding approval strategy so we don't sign
       //     an offline EIP-2612 permit only to discover batching isn't supported.
-      let canBatch = false
+      let canBatch = true
       try {
         const chainIdHexForCaps = sourceChainData?.chainId
           ? '0x' + BigInt(sourceChainData.chainId).toString(16)
           : undefined
-        const caps = (await evmProvider.request({
+        const capsPromise = evmProvider.request({
           method: 'wallet_getCapabilities',
           params: [evmAddress],
-        })) as
+        })
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('wallet_getCapabilities timed out after 5s')), 5000)
+        )
+        const caps = (await Promise.race([capsPromise, timeoutPromise])) as
           | Record<
               string,
               {
@@ -1239,7 +1243,7 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
               }
             >
           | undefined
-        console.log('[useBridge] wallet_getCapabilities', JSON.stringify(caps, null, 2))
+        console.log('[useBridge] wallet_getCapabilities succeeded', JSON.stringify(caps, null, 2))
         if (caps && chainIdHexForCaps) {
           const chainCaps = caps[chainIdHexForCaps] ?? caps[chainIdHexForCaps.toLowerCase()] ?? caps[chainIdHexForCaps.toUpperCase()]
           canBatch =
@@ -1248,8 +1252,8 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
             chainCaps?.atomic?.status === 'supported'
         }
       } catch (capsErr) {
-        console.log('[useBridge] wallet_getCapabilities not supported:', capsErr)
-        canBatch = false
+        console.log('[useBridge] wallet_getCapabilities not supported, assuming batching available:', capsErr)
+        canBatch = true
       }
       console.log('[useBridge] canBatch:', canBatch)
 

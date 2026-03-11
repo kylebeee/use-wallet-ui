@@ -91,10 +91,11 @@ function clearStaleWcPairings(): void {
  *
  * All defaults can be overridden by the caller.
  */
-export const getDefaultConfig: typeof rkGetDefaultConfig = (params) => {
+export const getDefaultConfig = (params: Parameters<typeof rkGetDefaultConfig>[0] & { debug?: boolean }) => {
   clearStaleWcPairings()
 
   const p = params as Record<string, any>
+  const debug = !!p.debug
   const appUrl: string | undefined = p.appUrl ?? (typeof window !== 'undefined' ? window.location.origin : undefined)
 
   // Merge bridge-compatible chains with user chains so that wagmi operations
@@ -108,27 +109,106 @@ export const getDefaultConfig: typeof rkGetDefaultConfig = (params) => {
   // Default mobile redirect so MetaMask Mobile returns to the browser tab.
   const redirectUrl: string | undefined = typeof window !== 'undefined' ? window.location.origin : undefined
   const userWcMeta = p.walletConnectParameters?.metadata ?? {}
-  const walletConnectParameters = redirectUrl
-    ? {
-        ...p.walletConnectParameters,
-        metadata: {
-          icons: [],
-          ...userWcMeta,
-          redirect: {
-            universal: redirectUrl,
-            ...userWcMeta.redirect,
-          },
-        },
-      }
-    : p.walletConnectParameters
 
-  return rkGetDefaultConfig({
+  // Register all EVM methods used across use-wallet and use-wallet-ui as
+  // optional WalletConnect session methods so the wallet routes them through
+  // the WC channel instead of treating them as read-only RPC requests (which
+  // can 403 on public RPCs like mainnet.base.org).
+  const bridgeOptionalMethods = [
+    'eth_call',
+    'eth_chainId',
+    'eth_blockNumber',
+    'eth_sendTransaction',
+    'eth_estimateGas',
+    'eth_getTransactionReceipt',
+    'eth_signTypedData_v4',
+    'wallet_switchEthereumChain',
+    'wallet_addEthereumChain',
+    'wallet_getCapabilities',
+    'wallet_sendCalls',
+    'wallet_getCallsStatus',
+  ]
+  const userOptionalMethods: string[] = p.walletConnectParameters?.optionalMethods ?? []
+  const optionalMethods = [
+    ...new Set([...bridgeOptionalMethods, ...userOptionalMethods]),
+  ]
+
+  const walletConnectParameters = {
+    ...p.walletConnectParameters,
+    optionalMethods,
+    ...(redirectUrl
+      ? {
+          metadata: {
+            icons: [],
+            ...userWcMeta,
+            redirect: {
+              universal: redirectUrl,
+              ...userWcMeta.redirect,
+            },
+          },
+        }
+      : {}),
+  }
+
+  const config = rkGetDefaultConfig({
     wallets: DEFAULT_WALLETS,
     ...params,
     chains: chains as any,
     ...(appUrl ? { appUrl } : {}),
     ...(walletConnectParameters ? { walletConnectParameters } : {}),
   })
+
+  if (debug) {
+    // Debug: log wagmi state transitions (connections, chain changes)
+    config.subscribe(
+      (state) => ({
+        chainId: state.chainId,
+        current: state.current,
+        status: state.status,
+        connections: state.connections.size,
+      }),
+      (next, prev) => {
+        console.log('[wagmi] state change', { prev, next })
+      },
+    )
+
+    // Debug: log connector events and wrap provider requests
+    for (const connector of config.connectors) {
+      connector.emitter.on('connect', (data: any) => {
+        console.log(`[wagmi] connector "${connector.name}" connect`, data)
+      })
+      connector.emitter.on('disconnect', () => {
+        console.log(`[wagmi] connector "${connector.name}" disconnect`)
+      })
+      connector.emitter.on('change', (data: any) => {
+        console.log(`[wagmi] connector "${connector.name}" change`, data)
+      })
+
+      // Wrap getProvider to log all EIP-1193 request/response traffic
+      const origGetProvider = connector.getProvider.bind(connector)
+      connector.getProvider = async (...args: any[]) => {
+        const provider = await origGetProvider(...args)
+        if (provider && !(provider as any).__wuiDebugWrapped) {
+          const origRequest = provider.request.bind(provider)
+          provider.request = async (req: { method: string; params?: unknown[] }) => {
+            console.log(`[wagmi:rpc] → ${connector.name} ${req.method}`, req.params ?? [])
+            try {
+              const result = await origRequest(req)
+              console.log(`[wagmi:rpc] ← ${connector.name} ${req.method}`, result)
+              return result
+            } catch (err) {
+              console.error(`[wagmi:rpc] ✗ ${connector.name} ${req.method}`, err)
+              throw err
+            }
+          }
+          ;(provider as any).__wuiDebugWrapped = true
+        }
+        return provider
+      }
+    }
+  }
+
+  return config
 }
 
 // Backward-compatible exports

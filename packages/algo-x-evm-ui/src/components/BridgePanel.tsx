@@ -436,11 +436,11 @@ export function BridgePanel({
         <div className="flex items-center justify-center py-6 text-sm text-[var(--wui-color-text-secondary)]">
           <Spinner className="h-4 w-4 mr-2" />
           {status === 'permit-signing'
-            ? 'Signing permit…'
+            ? 'Signing permit'
             : status === 'approving'
-              ? 'Approving token…'
+              ? 'Checking capabilities'
               : status === 'bundling'
-                ? 'Confirm approval + bridge in wallet…'
+                ? 'Confirm approval + bridge in wallet'
                 : 'Confirm in wallet'}
         </div>
       )}
