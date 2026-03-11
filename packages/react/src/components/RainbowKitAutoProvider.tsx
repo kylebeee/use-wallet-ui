@@ -25,7 +25,7 @@ export function createBoundProvider(wagmiConfig: WagmiConfig, bridgeState: Rainb
     children: ReactNode
   }) {
     return (
-      <WagmiProvider config={wagmiConfig}>
+      <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider theme={resolvedTheme === 'dark' ? darkTheme() : lightTheme()}>
             <RainbowKitBridge walletManager={walletManager} state={bridgeState} />
