@@ -16,6 +16,7 @@ import {
 import { Label, Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import { QueryClientProvider, useIsFetching, useQueryClient } from '@tanstack/react-query'
 import { formatNumber, formatShortAddress } from '@txnlab/utils-ts'
+import { ALGORAND_EVM_CHAIN_CONFIG } from 'algo-x-evm-sdk'
 import React, { ReactElement, RefObject, useState } from 'react'
 
 import { AlgoSymbol, ManagePanel, useAssets, type AssetHoldingDisplay } from '@d13co/algo-x-evm-ui'
@@ -122,6 +123,7 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
           name: info.name || `ASA#${holding.assetId}`,
           unitName: info.unitName,
           amount,
+          decimals: info.decimals,
         }
       })
       .filter((a): a is AssetHoldingDisplay => a !== null)
@@ -214,6 +216,50 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
     if (!url) return undefined
     return () => window.open(url, '_blank', 'noopener,noreferrer')
   }, [activeAddress, activeNetwork])
+
+  const evmWalletName = (activeWallet?.activeAccount?.metadata?.connectorName as string) || 'MetaMask'
+  const evmWalletIcon = (activeWallet?.activeAccount?.metadata?.connectorIcon as string) || activeWallet?.metadata.icon || ''
+
+  const handleAddNetwork = React.useCallback(async () => {
+    const getEvmProvider = (activeWallet as unknown as Record<string, unknown>)?.getEvmProvider as
+      | (() => Promise<{ request(args: { method: string; params?: unknown[] }): Promise<unknown> }>)
+      | undefined
+    if (!getEvmProvider) return
+    try {
+      const provider = await getEvmProvider()
+      await provider.request({
+        method: 'wallet_addEthereumChain',
+        params: [ALGORAND_EVM_CHAIN_CONFIG],
+      })
+    } catch (err) {
+      console.error('[ConnectedWalletMenu] Failed to add Algorand network:', err)
+    }
+  }, [activeWallet])
+
+  const handleAddAsset = React.useCallback(async (asset: AssetHoldingDisplay) => {
+    const getEvmProvider = (activeWallet as unknown as Record<string, unknown>)?.getEvmProvider as
+      | (() => Promise<{ request(args: { method: string; params?: unknown[] }): Promise<unknown> }>)
+      | undefined
+    if (!getEvmProvider) return
+    try {
+      const provider = await getEvmProvider()
+      // Convert asset ID to pseudo contract address: decimal digits left-padded to 40 chars
+      const address = '0x' + String(asset.assetId).padStart(40, '0')
+      await provider.request({
+        method: 'wallet_watchAsset',
+        params: {
+          type: 'ERC20',
+          options: {
+            address,
+            symbol: asset.unitName || asset.name.slice(0, 11),
+            decimals: asset.decimals,
+          },
+        } as unknown as unknown[],
+      })
+    } catch (err) {
+      console.error('[ConnectedWalletMenu] Failed to add asset to wallet:', err)
+    }
+  }, [activeWallet])
 
   // Shared balance display with toggle
   const balanceDisplay = (
@@ -490,6 +536,13 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
                       onRefresh={() => rqClient.invalidateQueries()}
                       isRefreshing={isFetching > 0}
                       onExplore={handleExplore}
+                      addToWallet={{
+                        walletName: evmWalletName,
+                        walletIcon: evmWalletIcon,
+                        assets: assetHoldings.length > 0 ? assetHoldings : undefined,
+                        onAddNetwork: handleAddNetwork,
+                        onAddAsset: handleAddAsset,
+                      }}
                     />
                   )}
                 </div>

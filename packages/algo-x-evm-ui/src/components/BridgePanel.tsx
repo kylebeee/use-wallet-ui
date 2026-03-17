@@ -85,7 +85,6 @@ export interface BridgePanelProps {
   error: string | null
   sourceTxId: string | null
   destinationTxId?: string | null
-  destinationChainSymbol?: string | null
 
   // Actions
   onBridge: () => void
@@ -475,6 +474,7 @@ export function BridgePanel({
           watchingForFunding={watchingForFunding}
           optInConfirmed={optInConfirmed}
           sourceTxId={sourceTxId}
+          explorerAddress={sourceIsAlgorand ? algorandAddress : evmAddress}
         />
       )}
 
@@ -500,6 +500,18 @@ export function BridgePanel({
             <p className="mt-1.5 text-xs text-[var(--wui-color-text-tertiary)] flex items-center justify-center gap-1">
               Source TX: <span className="font-mono">{formatShortAddr(sourceTxId)}</span>
               <CopyButton text={sourceTxId} variant="icon" title="Copy transaction ID" />
+            </p>
+          )}
+          {(evmAddress || algorandAddress) && (
+            <p className="mt-1 text-xs">
+              <a
+                href={`https://core.allbridge.io/explorer/address/${sourceIsAlgorand ? algorandAddress : evmAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--wui-color-primary)] hover:underline inline-flex items-center gap-1"
+              >
+                Allbridge Explorer <ExternalLinkIcon />
+              </a>
             </p>
           )}
           {destinationTxId && (
@@ -567,6 +579,7 @@ interface BridgeProgressProps {
   watchingForFunding: boolean
   optInConfirmed: boolean
   sourceTxId: string | null
+  explorerAddress: string | null
 }
 
 function CheckIcon() {
@@ -613,6 +626,7 @@ function BridgeProgress({
   watchingForFunding,
   optInConfirmed,
   sourceTxId,
+  explorerAddress,
 }: BridgeProgressProps) {
   const sendDone = transferStatus != null && transferStatus.sendConfirmationsNeeded > 0 && transferStatus.sendConfirmations >= transferStatus.sendConfirmationsNeeded
   const sigsDone = transferStatus != null && transferStatus.signaturesNeeded > 0 && transferStatus.signaturesCount >= transferStatus.signaturesNeeded
@@ -729,15 +743,17 @@ function BridgeProgress({
             Source TX: <span className="font-mono">{formatShortAddr(sourceTxId)}</span>
           </span>
           <CopyButton text={sourceTxId} variant="icon" title="Copy transaction ID" />
-          <a
-            href={`https://explorer-variant-filter.api.allbridgecoreapi.net/search?q=${sourceTxId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-0.5 p-0.5 rounded hover:bg-[var(--wui-color-bg-secondary)] text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] transition-colors"
-            title="View on Allbridge Explorer"
-          >
-            <ExternalLinkIcon />
-          </a>
+          {explorerAddress && (
+            <a
+              href={`https://core.allbridge.io/explorer/address/${explorerAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-0.5 p-0.5 rounded hover:bg-[var(--wui-color-bg-secondary)] text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] transition-colors"
+              title="View on Allbridge Explorer"
+            >
+              <ExternalLinkIcon />
+            </a>
+          )}
         </div>
       )}
     </div>

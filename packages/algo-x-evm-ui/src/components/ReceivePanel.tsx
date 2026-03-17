@@ -44,7 +44,7 @@ export function ReceivePanel({
   status,
   error,
   handleOptIn,
-  reset,
+  reset: _reset,
   retry,
   onBack,
   nameSearchResults,

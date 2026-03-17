@@ -9,6 +9,7 @@ import {
   useRole,
 } from '@floating-ui/react'
 import { BridgePanel } from '@d13co/algo-x-evm-ui'
+import { useNetwork } from '@txnlab/use-wallet-react'
 import { useState, useEffect, useCallback } from 'react'
 
 import { useBridgeDialog } from '../providers/BridgeDialogProvider'
@@ -135,8 +136,10 @@ function BridgeIcon({ className }: { className?: string }) {
 function ExpandedBridgeDialog() {
   const { bridge, closeBridge, minimizeBridge } = useBridgeDialog()
   const { theme } = useWalletUI()
+  const { activeNetwork } = useNetwork()
   const [animationState, setAnimationState] = useState<'starting' | 'entered' | 'exiting' | null>('starting')
 
+  const isMainnet = activeNetwork === 'mainnet'
   const isProcessing = PROCESSING_STATUSES.has(bridge.status)
   const isSuccess = bridge.status === 'success'
   const dataTheme = theme === 'system' ? undefined : theme
@@ -224,7 +227,32 @@ function ExpandedBridgeDialog() {
                 )}
               </div>
               <div className="p-4 pt-2">
-                <BridgePanel {...bridgeProps} hideHeader autoFocusAmount />
+                {isMainnet ? (
+                  <BridgePanel {...bridgeProps} hideHeader autoFocusAmount />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-12 w-12 text-[var(--wui-color-text-tertiary)] mb-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 8v4" />
+                      <path d="M12 16h.01" />
+                    </svg>
+                    <p className="text-base font-medium text-[var(--wui-color-text)] mb-1">
+                      Bridging is only available on Mainnet
+                    </p>
+                    <p className="text-sm text-[var(--wui-color-text-secondary)]">
+                      Please switch to Mainnet to use the bridge.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </FloatingFocusManager>

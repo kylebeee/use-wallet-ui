@@ -66,7 +66,7 @@ export function SendPanel({
   status,
   error,
   handleSend,
-  reset,
+  reset: _reset,
   retry,
   onBack,
 }: SendPanelProps) {

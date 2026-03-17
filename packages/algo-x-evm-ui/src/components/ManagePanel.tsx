@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { AddToWalletPanel, type AddToWalletPanelProps } from './AddToWalletPanel'
 import { AlgoSymbol } from './AlgoSymbol'
 import { BridgePanel, type BridgePanelProps } from './BridgePanel'
 import { ReceivePanel, type ReceivePanelProps } from './ReceivePanel'
@@ -9,6 +10,7 @@ export interface AssetHoldingDisplay {
   name: string
   unitName: string
   amount: string
+  decimals: number
 }
 
 export interface ManagePanelProps {
@@ -27,6 +29,7 @@ export interface ManagePanelProps {
   onExplore?: () => void
   /** When provided, the Bridge button calls this instead of navigating to the embedded bridge panel */
   onBridgeClick?: () => void
+  addToWallet?: Omit<AddToWalletPanelProps, 'onBack'>
 }
 
 const balanceFormatter = new Intl.NumberFormat(undefined, {
@@ -62,12 +65,13 @@ export function ManagePanel({
   isRefreshing,
   onExplore,
   onBridgeClick,
+  addToWallet,
 }: ManagePanelProps) {
-  const [mode, setMode] = useState<'main' | 'send' | 'opt-in' | 'bridge'>('main')
+  const [mode, setMode] = useState<'main' | 'send' | 'opt-in' | 'bridge' | 'add-to-wallet'>('main')
   const [showAllAssets, setShowAllAssets] = useState(false)
   const [animDir, setAnimDir] = useState<'forward' | 'back' | 'none'>('none')
 
-  const goForward = useCallback((target: 'send' | 'opt-in' | 'bridge') => {
+  const goForward = useCallback((target: 'send' | 'opt-in' | 'bridge' | 'add-to-wallet') => {
     setAnimDir('forward')
     setMode(target)
   }, [])
@@ -96,6 +100,8 @@ export function ManagePanel({
     content = <ReceivePanel {...optIn} onOptOut={handleOptOut} onBack={() => goBack(optIn.reset)} />
   } else if (mode === 'bridge' && bridge) {
     content = <BridgePanel {...bridge} onBack={() => goBack(bridge.onReset)} />
+  } else if (mode === 'add-to-wallet' && addToWallet) {
+    content = <AddToWalletPanel {...addToWallet} onBack={() => goBack()} />
   } else {
     content = (
       <>
@@ -186,6 +192,7 @@ export function ManagePanel({
         {/* Assets */}
         {assets && assets.length > 0 && (
           <div className="mb-4">
+            <div className="border-t border-[var(--wui-color-border)] mb-3" />
             <h4 className="text-xs font-medium text-[var(--wui-color-text-tertiary)] uppercase tracking-wide mb-1.5">
               Assets
             </h4>
@@ -338,6 +345,15 @@ export function ManagePanel({
             </svg>
             Explore
           </button>
+          {addToWallet && (
+            <button
+              onClick={() => goForward('add-to-wallet')}
+              className="col-span-2 py-2.5 px-4 bg-[var(--wui-color-bg-tertiary)] text-[var(--wui-color-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm flex items-center justify-center"
+            >
+              <img src={addToWallet.walletIcon} alt={`${addToWallet.walletName} icon`} width={16} height={16} className="mr-1.5 object-contain" />
+              Add to {addToWallet.walletName}
+            </button>
+          )}
         </div>
       </>
     )

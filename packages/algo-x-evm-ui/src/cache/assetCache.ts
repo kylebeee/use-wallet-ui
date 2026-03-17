@@ -160,13 +160,13 @@ function clear(): Promise<void> {
   )
 }
 
-function getCount(): Promise<number> {
+function hasAny(): Promise<boolean> {
   return open().then(
     (db) =>
       new Promise((resolve, reject) => {
         const tx = db.transaction(ASSETS_STORE, 'readonly')
-        const request = tx.objectStore(ASSETS_STORE).count()
-        request.onsuccess = () => resolve(request.result)
+        const request = tx.objectStore(ASSETS_STORE).openCursor()
+        request.onsuccess = () => resolve(request.result != null)
         request.onerror = () => reject(request.error)
       }),
   )
@@ -189,7 +189,7 @@ export const AssetCache = {
   insertMany,
   searchByName,
   getById,
-  getCount,
+  hasAny,
   getLastUpdated,
   setLastUpdated,
   clear,

@@ -11,6 +11,8 @@ export { TransactionReview } from './components/TransactionReview'
 export type { TransactionReviewProps } from './components/TransactionReview'
 
 // Shared UI
+export { AddToWalletPanel } from './components/AddToWalletPanel'
+export type { AddToWalletPanelProps } from './components/AddToWalletPanel'
 export { AlgoSymbol } from './components/AlgoSymbol'
 export { Spinner } from './components/Spinner'
 export { TransactionStatus } from './components/TransactionStatus'

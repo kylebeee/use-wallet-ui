@@ -166,18 +166,15 @@ function getPersistedState(): PersistedBridgeState | null {
   try {
     const raw = localStorage.getItem(BRIDGE_PERSIST_KEY)
     if (!raw) {
-      console.log('[useBridge] getPersistedState: no persisted state found')
       return null
     }
     const p = JSON.parse(raw) as PersistedBridgeState
     const ageMs = Date.now() - p.persistedAt
     // Ignore state older than 1 hour
     if (ageMs > 3_600_000) {
-      console.log('[useBridge] getPersistedState: discarding stale state', { status: p.status, sourceTxId: p.sourceTxId, ageMs })
       localStorage.removeItem(BRIDGE_PERSIST_KEY)
       return null
     }
-    console.log('[useBridge] getPersistedState: found persisted state', { status: p.status, sourceTxId: p.sourceTxId, sourceChain: p.sourceChainSymbol, destChain: p.destChainSymbol, ageMs })
     return p
   } catch {
     return null
@@ -878,8 +875,6 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
     const p = persistedRef.current
     persistedRef.current = null
 
-    // console.log('[useBridge] restoring persisted state:', { status: p.status, sourceTxId: p.sourceTxId, sourceChain: p.sourceChainSymbol, sourceToken: p.sourceTokenSymbol, destChain: p.destChainSymbol, destToken: p.destTokenSymbol, amount: p.amount, optInNeeded: p.optInNeeded, optInSigned: p.optInSigned })
-
     setStatus(p.status as BridgeStatus)
     setSourceTxId(p.sourceTxId)
     setSelectedSourceChainSymbol(p.sourceChainSymbol)
@@ -918,11 +913,9 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
           optInSigned,
           persistedAt: Date.now(),
         }
-        // console.log('[useBridge] persisting state:', { status, sourceTxId, sourceChain: selectedSourceChainSymbol, sourceToken: selectedSourceTokenSymbol, destChain: selectedDestChainSymbol, destToken: selectedDestTokenSymbol, amount, optInNeeded, optInSigned })
         localStorage.setItem(BRIDGE_PERSIST_KEY, JSON.stringify(state))
       } catch {}
     } else if (status === 'success' || status === 'error' || status === 'idle') {
-      // console.log('[useBridge] clearing persisted state:', { status })
       try { localStorage.removeItem(BRIDGE_PERSIST_KEY) } catch {}
     }
   }, [status, sourceTxId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -930,7 +923,6 @@ export function useBridge(options: UseBridgeOptions = {}): UseBridgeReturn {
   // -- Actions --
 
   const reset = useCallback(() => {
-    console.log('[useBridge] reset: clearing persisted state')
     abortRef.current?.abort()
     try { localStorage.removeItem(BRIDGE_PERSIST_KEY) } catch {}
     setAmount('')
