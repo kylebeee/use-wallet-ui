@@ -2,6 +2,10 @@ import type { TransactionData, AssetInfo } from '../types'
 import { formatAssetAmount, assetLabel } from '../formatters'
 import { ChevronRight } from './icons'
 
+const ARROW = <span className="text-[var(--wui-color-text-secondary)] px-2">&rarr;</span>
+const DASH = <span className="text-[var(--wui-color-text-secondary)] px-2">&mdash;</span>
+const EMPTY_ESCROWS: Record<string, string> = {}
+
 export interface TransactionFlowProps {
   txn: TransactionData
   assetInfo?: AssetInfo
@@ -9,7 +13,7 @@ export interface TransactionFlowProps {
   onExpand?: () => void
 }
 
-export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: TransactionFlowProps) {
+export function TransactionFlow({ txn, assetInfo, appEscrows = EMPTY_ESCROWS, onExpand }: TransactionFlowProps) {
   const resolveAddr = (full: string | undefined, short: string): string =>
     (full && appEscrows[full]) || short
 
@@ -35,17 +39,15 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
   const renderSummary = () => {
     const fiveCol = 'grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center text-xs'
     const threeCol = 'grid grid-cols-[1fr_auto_auto] items-center text-xs'
-    const arrow = <span className="text-[var(--wui-color-text-tertiary)] px-2">&rarr;</span>
-    const dash = <span className="text-[var(--wui-color-text-tertiary)] px-2">&mdash;</span>
 
     switch (txn.type) {
       case 'pay':
         return (
           <div className={fiveCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">{amountDisplay()}</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-text-secondary)] truncate text-right">{resolveAddr(txn.receiver, txn.receiverShort!)}</span>
           </div>
         )
@@ -55,7 +57,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
           return (
             <div className={threeCol}>
               <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-              {dash}
+              {DASH}
               <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">
                 Opt In {assetLabel(txn, assetInfo)}
               </span>
@@ -65,9 +67,9 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
         return (
           <div className={fiveCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">{amountDisplay()}</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-text-secondary)] truncate text-right">{resolveAddr(txn.receiver, txn.receiverShort!)}</span>
           </div>
         )
@@ -76,11 +78,11 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
         return (
           <div className={fiveCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">
               {txn.isFreezing ? 'Freeze' : 'Unfreeze'} {assetLabel(txn, assetInfo)}
             </span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-text-secondary)] truncate text-right">{txn.freezeTargetShort}</span>
           </div>
         )
@@ -89,7 +91,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
         return (
           <div className={threeCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {dash}
+            {DASH}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">
               Configure {txn.assetIndex ? assetLabel(txn, assetInfo) : 'New Asset'}
             </span>
@@ -100,9 +102,9 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
         return (
           <div className={fiveCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">App Call</span>
-            {arrow}
+            {ARROW}
             <span className="text-[var(--wui-color-text-secondary)] whitespace-nowrap text-right">
               {txn.appIndex ? `#${txn.appIndex}` : 'New App'}
             </span>
@@ -113,7 +115,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
         return (
           <div className={threeCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {dash}
+            {DASH}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">Key Registration</span>
           </div>
         )
@@ -122,7 +124,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
         return (
           <div className={threeCol}>
             <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
-            {dash}
+            {DASH}
             <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">{txn.typeLabel}</span>
           </div>
         )
@@ -162,7 +164,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
           <button
             type="button"
             onClick={onExpand}
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-tertiary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
             aria-label="Show details"
           >
             <ChevronRight size={14} />
@@ -173,7 +175,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
       {/* Note */}
       {txn.note && (
         <div className="flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 mt-1.5 bg-[var(--wui-color-bg-tertiary)]">
-          <span className="text-[var(--wui-color-text-tertiary)] font-medium">NOTE</span>
+          <span className="text-[var(--wui-color-text-secondary)] font-medium">NOTE</span>
           <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.note}</span>
         </div>
       )}

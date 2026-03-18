@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { BackButton } from './BackButton'
+import { SecondaryButton } from './SecondaryButton'
 import type { AssetHoldingDisplay } from './ManagePanel'
 import { Spinner } from './Spinner'
 import { TransactionStatus, type TransactionStatusValue } from './TransactionStatus'
@@ -99,10 +100,7 @@ export function SendPanel({
   // When closing out, use total balance; otherwise use available balance
   const isClosingOut = showReserveOption && !reserveFees && canCloseOut
 
-  // Sync closeAlgoAccount flag with closing-out state
-  useEffect(() => {
-    setCloseAlgoAccount?.(isClosingOut)
-  }, [isClosingOut, setCloseAlgoAccount])
+
 
   // Balance label — shows "Total:" when closing out, "Available:" otherwise
   const algoBalanceLabel = (() => {
@@ -139,6 +137,8 @@ export function SendPanel({
     if (sendType === 'algo' && availableBalance != null) {
       setShowReserveOption(true)
       setAmount(computeAlgoMax(reserveFees))
+      // showReserveOption is now true; sync close-out flag
+      setCloseAlgoAccount?.(!reserveFees && canCloseOut)
     } else if (sendType === 'asa' && selectedAsset) {
       setShowReserveOption(false)
       setAmount(selectedAsset.amount)
@@ -150,6 +150,8 @@ export function SendPanel({
     const next = !reserveFees
     setReserveFees(next)
     setAmount(computeAlgoMax(next))
+    // Sync close-out flag: closing out when reserve is off and account can close
+    setCloseAlgoAccount?.(showReserveOption && !next && canCloseOut)
   }
 
   // Overspend check — use totalBalance when closing out
@@ -167,12 +169,6 @@ export function SendPanel({
 
   // When opting out of a zero-balance asset, auto-fill receiver with self and set amount to 0
   const isZeroBalanceOptOut = isZeroAsaBalance && optOut === true
-  useEffect(() => {
-    if (isZeroBalanceOptOut && activeAddress) {
-      setReceiver(activeAddress)
-      setAmount('0')
-    }
-  }, [isZeroBalanceOptOut, activeAddress, setReceiver, setAmount])
 
   const optOutLabel = selectedAsset?.unitName || selectedAsset?.name || assetInfo?.unitName || assetInfo?.name || 'this asset'
 
@@ -191,7 +187,7 @@ export function SendPanel({
           <p className="text-xs text-[var(--wui-color-text-secondary)] mb-2">Send ALGO or assets to any Algorand address</p>
 
           {/* Available balance */}
-          {availableLabel && <p className="self-end text-xs text-[var(--wui-color-text-tertiary)] mb-1">{availableLabel}</p>}
+          {availableLabel && <p className="self-end text-xs text-[var(--wui-color-text-secondary)] mb-1">{availableLabel}</p>}
 
           {/* Amount + asset selector */}
           <div className="mb-3 flex gap-2">
@@ -203,7 +199,7 @@ export function SendPanel({
                 autoFocus={true}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                className="w-full rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 pr-12 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
+                className="w-full rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 pr-12 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
               />
               <button
                 type="button"
@@ -265,7 +261,7 @@ export function SendPanel({
                 placeholder="Receiver ALGO address"
                 value={receiver}
                 onChange={(e) => setReceiver(e.target.value)}
-                className="w-full rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
+                className="w-full rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
               />
             </div>
           )}
@@ -287,13 +283,20 @@ export function SendPanel({
                 <input
                   type="checkbox"
                   checked={optOut ?? false}
-                  onChange={() => setOptOut(!optOut)}
+                  onChange={() => {
+                    const next = !optOut
+                    setOptOut(next)
+                    if (next && isZeroAsaBalance && activeAddress) {
+                      setReceiver(activeAddress)
+                      setAmount('0')
+                    }
+                  }}
                   className="accent-[var(--wui-color-primary)] h-3.5 w-3.5"
                 />
                 <span className="text-xs text-[var(--wui-color-text-secondary)]">Opt out of {optOutLabel}</span>
               </label>
               {optOut && (
-                <p className="mt-1 ml-5 text-xs text-[var(--wui-color-text-tertiary)] leading-relaxed">
+                <p className="mt-1 ml-5 text-xs text-[var(--wui-color-text-secondary)] leading-relaxed">
                   You will not be able to receive {optOutLabel} until you opt back in. This will reclaim 0.1Ⱥ available balance.
                 </p>
               )}
@@ -332,12 +335,7 @@ export function SendPanel({
       />
 
       {status === 'success' && (
-        <button
-          onClick={onBack}
-          className="mt-3 w-full py-2.5 px-4 bg-[var(--wui-color-primary)] text-[var(--wui-color-primary-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm"
-        >
-          Back
-        </button>
+        <SecondaryButton onClick={onBack} className="mt-3">Back</SecondaryButton>
       )}
     </>
   )

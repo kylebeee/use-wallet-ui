@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { CachedAsset } from '../cache/assetCache'
 import { BackButton } from './BackButton'
+import { SecondaryButton } from './SecondaryButton'
 import { CopyButton } from './CopyButton'
 import { ChevronDown, VerifiedBadge } from './icons'
 import { Spinner } from './Spinner'
@@ -234,9 +235,7 @@ export function ReceivePanel({
       />
 
       {status === 'success' && (
-        <button onClick={onBack} className="mt-3 w-full py-2.5 px-4 bg-[var(--wui-color-primary)] text-[var(--wui-color-primary-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm">
-          Back
-        </button>
+        <SecondaryButton onClick={onBack} className="mt-3">Back</SecondaryButton>
       )}
     </>
   )
@@ -275,12 +274,9 @@ function AssetCard({
         <div className="text-center">
           <p className="text-xs text-[var(--wui-color-text-secondary)] py-1">Already opted in — no action needed.</p>
           {onOptOut && (
-            <button
-              onClick={() => onOptOut(index)}
-              className="mt-2 w-full py-2 px-4 border border-[var(--wui-color-border)] text-[var(--wui-color-text-secondary)] font-medium rounded-xl hover:brightness-90 transition-all text-sm"
-            >
+            <SecondaryButton onClick={() => onOptOut(index)} className="mt-2">
               Opt out of {unitName || name}
-            </button>
+            </SecondaryButton>
           )}
         </div>
       ) : (

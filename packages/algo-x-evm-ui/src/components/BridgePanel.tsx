@@ -3,6 +3,7 @@ import { BackButton } from './BackButton'
 import { CopyButton } from './CopyButton'
 import { ExternalLinkIcon } from './ExternalLinkIcon'
 import { CheckCircleFilled, XCircleFilled } from './icons'
+import { SecondaryButton } from './SecondaryButton'
 import { Spinner } from './Spinner'
 
 export interface BridgeChainDisplay {
@@ -110,9 +111,56 @@ export interface BridgeTransferStatus {
   receiveConfirmationsNeeded: number | null
 }
 
+const EMPTY_CHAINS: BridgeChainDisplay[] = []
+
 function formatShortAddr(addr: string): string {
   if (addr.length <= 14) return addr
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+}
+
+/** Displays a transaction ID with a copy button */
+function TxLine({ label, txId }: { label: string; txId: string }) {
+  return (
+    <p className="text-xs text-[var(--wui-color-text-secondary)] flex items-center justify-center gap-1">
+      {label}: <span className="font-mono">{formatShortAddr(txId)}</span>
+      <CopyButton text={txId} variant="icon" title={`Copy ${label.toLowerCase()}`} />
+    </p>
+  )
+}
+
+/** Allbridge Explorer link for an address */
+function AllbridgeExplorerLink({ address, children, muted }: { address: string; children: string; muted?: boolean }) {
+  return (
+    <a
+      href={`https://core.allbridge.io/explorer/address/${address}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={
+        muted
+          ? 'inline-flex items-center gap-1 rounded text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text-secondary)] transition-colors'
+          : 'text-[var(--wui-color-primary)] hover:underline inline-flex items-center gap-1'
+      }
+    >
+      {children} <ExternalLinkIcon />
+    </a>
+  )
+}
+
+/** Icon for a multi-step progress row: check when done, spinner when active, empty circle when pending */
+function StepIcon({ done, active }: { done: boolean; active: boolean }) {
+  if (done) return <CheckCircleFilled className="h-3.5 w-3.5 text-green-500 shrink-0" />
+  if (active) return <Spinner className="h-3.5 w-3.5 shrink-0" />
+  return <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--wui-color-border)]" />
+}
+
+/** Centered spinner with a status message */
+function StatusSpinner({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center py-6 text-sm text-[var(--wui-color-text-secondary)]">
+      <Spinner className="h-4 w-4 mr-2" />
+      {message}
+    </div>
+  )
 }
 
 /** Format a raw balance string (smallest units) to a human-readable number with up to 2 decimal places */
@@ -154,7 +202,7 @@ export function BridgePanel({
   onSourceChainChange,
   sourceTokenSymbol,
   onSourceTokenChange,
-  destinationChains = [],
+  destinationChains = EMPTY_CHAINS,
   destinationChainSymbol,
   onDestinationChainChange,
   sourceIsAlgorand = false,
@@ -246,18 +294,16 @@ export function BridgePanel({
 
       {/* No chains available */}
       {!chainsLoading && status === 'idle' && chains.length === 0 && (
-        <div className="text-center py-6">
+        <div className="text-center pt-6">
           <p className="text-sm text-[var(--wui-color-text-secondary)] mb-2">Bridge routes are currently unavailable.</p>
-          <button onClick={onRetry} className="text-sm text-[var(--wui-color-primary)] hover:underline">
-            Try again
-          </button>
+          <SecondaryButton onClick={onRetry}>Try again</SecondaryButton>
         </div>
       )}
 
       {/* Form (visible in idle state only) */}
       {!chainsLoading && status === 'idle' && chains.length > 0 && (
         <>
-          <p className="text-xs text-[var(--wui-color-text-tertiary)] mb-3">
+          <p className="text-xs text-[var(--wui-color-text-secondary)] mb-3">
             {sourceIsAlgorand
               ? 'Bridge tokens from Algorand to your EVM accounts using Allbridge'
               : 'Bridge tokens from your EVM accounts using Allbridge'}
@@ -312,7 +358,7 @@ export function BridgePanel({
               placeholder="0.00"
               value={amount}
               onChange={(e) => onAmountChange(e.target.value.replace(/[^0-9.]/g, ''))}
-              className={`w-full rounded-lg border bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-tertiary)] focus:outline-none focus:ring-2 focus:border-transparent ${insufficientFunds ? 'border-red-500 focus:ring-red-500/30' : 'border-[var(--wui-color-border)] focus:ring-[var(--wui-color-primary)]'}`}
+              className={`w-full rounded-lg border bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text)] placeholder:text-[var(--wui-color-text-secondary)] focus:outline-none focus:ring-2 focus:border-transparent ${insufficientFunds ? 'border-red-500 focus:ring-red-500/30' : 'border-[var(--wui-color-border)] focus:ring-[var(--wui-color-primary)]'}`}
             />
             {insufficientFunds && (
               <p className="mt-1 text-xs text-red-500">
@@ -415,32 +461,12 @@ export function BridgePanel({
       )}
 
       {/* Processing states */}
-      {(status === 'permit-signing' || status === 'approving' || status === 'bundling' || status === 'signing') && (
-        <div className="flex items-center justify-center py-6 text-sm text-[var(--wui-color-text-secondary)]">
-          <Spinner className="h-4 w-4 mr-2" />
-          {status === 'permit-signing'
-            ? 'Signing permit'
-            : status === 'approving'
-              ? 'Checking capabilities'
-              : status === 'bundling'
-                ? 'Confirm approval + bridge in wallet'
-                : 'Confirm in wallet'}
-        </div>
-      )}
-
-      {status === 'opting-in' && !sourceIsAlgorand && (
-        <div className="flex items-center justify-center py-6 text-sm text-[var(--wui-color-text-secondary)]">
-          <Spinner className="h-4 w-4 mr-2" />
-          Sign USDC opt-in for Algorand
-        </div>
-      )}
-
-      {status === 'sending' && (
-        <div className="flex items-center justify-center py-6 text-sm text-[var(--wui-color-text-secondary)]">
-          <Spinner className="h-4 w-4 mr-2" />
-          Sending bridge transaction
-        </div>
-      )}
+      {status === 'permit-signing' && <StatusSpinner message="Signing permit" />}
+      {status === 'approving' && <StatusSpinner message="Checking capabilities" />}
+      {status === 'bundling' && <StatusSpinner message="Confirm approval + bridge in wallet" />}
+      {status === 'signing' && <StatusSpinner message="Confirm in wallet" />}
+      {status === 'opting-in' && !sourceIsAlgorand && <StatusSpinner message="Sign USDC opt-in for Algorand" />}
+      {status === 'sending' && <StatusSpinner message="Sending bridge transaction" />}
 
       {/* Waiting / progress */}
       {(status === 'waiting' || status === 'watching-funding' || status === 'opt-in-sent') && (
@@ -463,7 +489,7 @@ export function BridgePanel({
 
       {/* Success */}
       {status === 'success' && (
-        <div className="text-center py-4">
+        <div className="text-center pt-4">
           <CheckCircleFilled className="h-8 w-8 mx-auto mb-2 text-green-500" />
           {receivedAmount && destinationTokenSymbol && (
             <p className="mt-1.5 text-sm text-[var(--wui-color-text-secondary)]">
@@ -474,13 +500,12 @@ export function BridgePanel({
             </p>
           )}
           {sourceTxId && (
-            <p className="mt-1.5 text-xs text-[var(--wui-color-text-tertiary)] flex items-center justify-center gap-1">
-              Source TX: <span className="font-mono">{formatShortAddr(sourceTxId)}</span>
-              <CopyButton text={sourceTxId} variant="icon" title="Copy transaction ID" />
-            </p>
+            <div className="mt-1.5">
+              <TxLine label="Source TX" txId={sourceTxId} />
+            </div>
           )}
           {destinationTxId && (
-            <p className="mt-1 text-xs text-[var(--wui-color-text-tertiary)] flex items-center justify-center gap-1">
+            <p className="mt-1 text-xs text-[var(--wui-color-text-secondary)] flex items-center justify-center gap-1">
               Destination TX:{' '}
               {destinationChainSymbol === 'ALG' ? (
                 <a
@@ -501,38 +526,24 @@ export function BridgePanel({
           )}
 
           {(evmAddress || algorandAddress) && (
-            <p className="mt-1 text-xs">
-              <a
-                href={`https://core.allbridge.io/explorer/address/${sourceIsAlgorand ? algorandAddress : evmAddress}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--wui-color-primary)] hover:underline inline-flex items-center gap-1"
-              >
-                Allbridge Explorer <ExternalLinkIcon />
-              </a>
-            </p>
+            <div className="flex items-center justify-center text-xs mt-1">
+              <AllbridgeExplorerLink address={(sourceIsAlgorand ? algorandAddress : evmAddress)!} muted>
+                Allbridge Explorer
+              </AllbridgeExplorerLink>
+            </div>
           )}
-          <button onClick={onReset} className="mt-3 text-sm text-[var(--wui-color-primary)] hover:underline">
-            Close
-          </button>
+          <SecondaryButton onClick={onReset} className="mt-3">Close</SecondaryButton>
         </div>
       )}
 
       {/* Error panel */}
       {status === 'error' && (
-        <div className="text-center py-4">
+        <div className="text-center pt-4">
           <XCircleFilled className="h-8 w-8 mx-auto mb-2 text-red-500" />
           <p className="text-sm font-medium text-[var(--wui-color-text)] mb-1">Bridge failed</p>
           {error && <p className="text-xs text-red-500 break-words mb-1.5">{error}</p>}
-          {sourceTxId && (
-            <p className="text-xs text-[var(--wui-color-text-tertiary)] flex items-center justify-center gap-1">
-              TX: <span className="font-mono">{formatShortAddr(sourceTxId)}</span>
-              <CopyButton text={sourceTxId} variant="icon" title="Copy transaction ID" />
-            </p>
-          )}
-          <button onClick={onRetry} className="mt-3 text-sm text-[var(--wui-color-primary)] hover:underline">
-            Try again
-          </button>
+          {sourceTxId && <TxLine label="TX" txId={sourceTxId} />}
+          <SecondaryButton onClick={onRetry} className="mt-3">Try again</SecondaryButton>
         </div>
       )}
     </>
@@ -557,10 +568,6 @@ interface BridgeProgressProps {
   explorerAddress: string | null
 }
 
-function CheckIcon() {
-  return <CheckCircleFilled className="h-3.5 w-3.5 text-green-500 shrink-0" />
-}
-
 function Countdown({ estimatedTimeMs, waitingSince }: { estimatedTimeMs: number; waitingSince: number }) {
   const [now, setNow] = useState(Date.now())
 
@@ -573,7 +580,7 @@ function Countdown({ estimatedTimeMs, waitingSince }: { estimatedTimeMs: number;
   const remaining = Math.max(0, estimatedTimeMs - elapsed)
 
   return (
-    <p className="text-center text-xs text-[var(--wui-color-text-tertiary)] mt-3">
+    <p className="text-center text-xs text-[var(--wui-color-text-secondary)] mt-3">
       {remaining <= 0 ? 'Arriving about now' : `~${formatTimeRemaining(remaining)} remaining`}
     </p>
   )
@@ -627,11 +634,11 @@ function BridgeProgress({
       <div className="inline-flex flex-col gap-3 self-center">
         {/* Source confirmations */}
         <div className="flex items-center gap-2 text-xs">
-          {sendDone ? <CheckIcon /> : <Spinner className="h-3.5 w-3.5 shrink-0" />}
+          <StepIcon done={sendDone} active={true} />
           <span className="text-[var(--wui-color-text-secondary)]">
             Source confirmation
             {transferStatus && !sendDone && (
-              <span className="ml-1 text-[var(--wui-color-text-tertiary)]">
+              <span className="ml-1 text-[var(--wui-color-text-secondary)]">
                 {transferStatus.sendConfirmations}/{transferStatus.sendConfirmationsNeeded}
               </span>
             )}
@@ -640,17 +647,11 @@ function BridgeProgress({
 
         {/* Validator signatures */}
         <div className="flex items-center gap-2 text-xs">
-          {sigsDone ? (
-            <CheckIcon />
-          ) : sendDone ? (
-            <Spinner className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--wui-color-border)]" />
-          )}
+          <StepIcon done={sigsDone} active={sendDone} />
           <span className="text-[var(--wui-color-text-secondary)]">
             Validator signatures
             {transferStatus && sendDone && !sigsDone && (
-              <span className="ml-1 text-[var(--wui-color-text-tertiary)]">
+              <span className="ml-1 text-[var(--wui-color-text-secondary)]">
                 {transferStatus.signaturesCount}/{transferStatus.signaturesNeeded}
               </span>
             )}
@@ -660,15 +661,7 @@ function BridgeProgress({
         {/* Opt-in status (conditional) */}
         {optInNeeded && (
           <div className="flex items-center gap-2 text-xs">
-            {optInConfirmed ? (
-              <CheckIcon />
-            ) : watchingForFunding ? (
-              <Spinner className="h-3.5 w-3.5 shrink-0" />
-            ) : optInSigned ? (
-              <Spinner className="h-3.5 w-3.5 shrink-0" />
-            ) : (
-              <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--wui-color-border)]" />
-            )}
+            <StepIcon done={optInConfirmed} active={optInSigned || watchingForFunding} />
             <span className="text-[var(--wui-color-text-secondary)]">
               {optInConfirmed
                 ? 'USDC opt-in confirmed'
@@ -683,17 +676,11 @@ function BridgeProgress({
 
         {/* Destination delivery */}
         <div className="flex items-center gap-2 text-xs">
-          {receiveDone ? (
-            <CheckIcon />
-          ) : sendDone && sigsDone ? (
-            <Spinner className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--wui-color-border)]" />
-          )}
+          <StepIcon done={receiveDone} active={sendDone && sigsDone} />
           <span className="text-[var(--wui-color-text-secondary)]">
             Destination delivery
             {transferStatus?.receiveConfirmations != null && transferStatus.receiveConfirmationsNeeded != null && !receiveDone && (
-              <span className="ml-1 text-[var(--wui-color-text-tertiary)]">
+              <span className="ml-1 text-[var(--wui-color-text-secondary)]">
                 {transferStatus.receiveConfirmations}/{transferStatus.receiveConfirmationsNeeded}
               </span>
             )}
@@ -706,27 +693,17 @@ function BridgeProgress({
         <Countdown estimatedTimeMs={estimatedTimeMs} waitingSince={waitingSince} />
       )}
 
-      {/* Source transaction ID */}
       {sourceTxId && (
-        <div className="flex items-center justify-center text-xs text-[var(--wui-color-text-tertiary)] mt-3 gap-0.5">
-          <span>
-            Source TX: <span className="font-mono">{formatShortAddr(sourceTxId)}</span>
-          </span>
-          <CopyButton text={sourceTxId} variant="icon" title="Copy transaction ID" />
+        <div className="mt-3">
+          <TxLine label="Source TX" txId={sourceTxId} />
         </div>
       )}
 
       {explorerAddress && (
-        <div className="flex items-center justify-center text-xs text-[var(--wui-color-text-tertiary)] mt-3 gap-0.5">
-          <a
-            href={`https://core.allbridge.io/explorer/address/${explorerAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-0.5 p-0.5 rounded hover:bg-[var(--wui-color-bg-secondary)] text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] transition-colors"
-            title="View on Allbridge Explorer"
-          >
-            View on Allbridge <ExternalLinkIcon />
-          </a>
+        <div className="flex items-center justify-center text-xs mt-3">
+          <AllbridgeExplorerLink address={explorerAddress} muted>
+            View on Allbridge
+          </AllbridgeExplorerLink>
         </div>
       )}
     </div>

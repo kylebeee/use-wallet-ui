@@ -109,7 +109,7 @@ export function TransactionDetail({
           const isDanger = dangerFields.has(label)
           return (
             <div key={label} className="flex flex-col gap-0.5">
-              <span className={`text-[10px] uppercase tracking-wide ${isDanger ? 'text-[var(--wui-color-danger-text)] font-bold' : 'text-[var(--wui-color-text-tertiary)]'}`}>
+              <span className={`text-[10px] uppercase tracking-wide ${isDanger ? 'text-[var(--wui-color-danger-text)] font-bold' : 'text-[var(--wui-color-text-secondary)]'}`}>
                 {label}
               </span>
               <span className={`text-sm font-mono break-all ${isDanger ? 'text-[var(--wui-color-danger-text)]' : 'text-[var(--wui-color-text)]'}`}>
@@ -132,7 +132,7 @@ export function TransactionDetail({
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-xs text-[var(--wui-color-text-tertiary)]">
+          <span className="text-xs text-[var(--wui-color-text-secondary)]">
             {position} of {groupSize}
           </span>
           <button

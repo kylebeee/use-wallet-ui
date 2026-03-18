@@ -1,4 +1,5 @@
 import { CheckCircleFilled } from './icons'
+import { SecondaryButton } from './SecondaryButton'
 import { Spinner } from './Spinner'
 
 export type TransactionStatusValue = 'idle' | 'signing' | 'sending' | 'success' | 'error'
@@ -44,7 +45,7 @@ export function TransactionStatus({ status, error, successMessage, onRetry, txId
         <CheckCircleFilled className="h-8 w-8 mx-auto mb-2 text-green-500" />
         <p className="text-sm font-medium text-[var(--wui-color-text)]">{successMessage}</p>
         {txId && (
-          <p className="mt-1.5 text-xs text-[var(--wui-color-text-tertiary)]">
+          <p className="mt-1.5 text-xs text-[var(--wui-color-text-secondary)]">
             TX:{' '}
             {explorerUrl ? (
               <a
@@ -65,11 +66,9 @@ export function TransactionStatus({ status, error, successMessage, onRetry, txId
   }
 
   return (
-    <div className="text-center py-3">
+    <div className="text-center pt-3">
       <p className="text-sm text-[var(--wui-color-danger-text)] mb-2 break-words">{error}</p>
-      <button onClick={onRetry} className="text-sm text-[var(--wui-color-primary)] hover:underline">
-        Try again
-      </button>
+      <SecondaryButton onClick={onRetry}>Try again</SecondaryButton>
     </div>
   )
 }

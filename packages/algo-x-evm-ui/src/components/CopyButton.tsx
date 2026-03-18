@@ -29,7 +29,7 @@ export function CopyButton({ text, variant = 'text', className, title = 'Copy' }
         onClick={handleCopy}
         className={
           className ??
-          'ml-1 p-0.5 rounded hover:bg-[var(--wui-color-bg-secondary)] text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] transition-colors'
+          'ml-1 p-0.5 rounded hover:bg-[var(--wui-color-bg-secondary)] text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text-secondary)] transition-colors'
         }
         title={state === 'copied' ? 'Copied!' : state === 'error' ? 'Error' : title}
       >

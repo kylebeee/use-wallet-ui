@@ -117,7 +117,7 @@ export function ManagePanel({
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="ml-auto p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] flex items-center justify-center disabled:pointer-events-none"
+              className="ml-auto p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text-secondary)] flex items-center justify-center disabled:pointer-events-none"
               title="Refresh"
             >
               <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
@@ -149,7 +149,7 @@ export function ManagePanel({
         {assets && assets.length > 0 && (
           <div className="mb-4">
             <div className="border-t border-[var(--wui-color-border)] mb-3" />
-            <h4 className="text-xs font-medium text-[var(--wui-color-text-tertiary)] uppercase tracking-wide mb-1.5">
+            <h4 className="text-xs font-medium text-[var(--wui-color-text-secondary)] uppercase tracking-wide mb-1.5">
               Assets
             </h4>
             <div
@@ -163,7 +163,7 @@ export function ManagePanel({
                 >
                   <span className="text-sm text-[var(--wui-color-text-secondary)] truncate mr-3 flex items-center gap-1.5">
                     {asset.name}{' '}
-                    <span className="text-[var(--wui-color-text-tertiary)]">
+                    <span className="text-[var(--wui-color-text-secondary)]">
                       (ID {asset.assetId})
                     </span>
                     {send && (
@@ -173,7 +173,7 @@ export function ManagePanel({
                           send.setAssetIdInput(String(asset.assetId))
                           goForward('send')
                         }}
-                        className="inline-flex items-center justify-center w-4 h-4 rounded-xs border border-[var(--wui-color-border)] text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] hover:border-[var(--wui-color-text-tertiary)] transition-colors shrink-0"
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-xs border border-[var(--wui-color-border)] text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text-secondary)] hover:border-[var(--wui-color-text-secondary)] transition-colors shrink-0"
                         title={`Send ${asset.unitName || asset.name}`}
                       >
                         <ArrowUpRight size={10} strokeWidth={2.5} />
@@ -189,7 +189,7 @@ export function ManagePanel({
             {assets.length > INITIAL_ASSET_COUNT && (
               <button
                 onClick={() => setShowAllAssets((v) => !v)}
-                className="text-xs text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] transition-colors mt-1"
+                className="text-xs text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text-secondary)] transition-colors mt-1"
               >
                 {showAllAssets ? 'show less' : `+${assets.length - INITIAL_ASSET_COUNT} more`}
               </button>

@@ -1,3 +1,4 @@
+import { BackButton } from './BackButton'
 import type { AssetHoldingDisplay } from './ManagePanel'
 
 export interface AddToWalletPanelProps {
@@ -21,25 +22,7 @@ export function AddToWalletPanel({
     <>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={onBack}
-          className="-ml-1 p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center"
-          title="Back"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
+        <BackButton onClick={onBack} />
         <h3 className="text-lg font-bold leading-none text-[var(--wui-color-text)] wallet-custom-font">
           Add to {walletName}
         </h3>
@@ -66,7 +49,7 @@ export function AddToWalletPanel({
       {/* Add individual assets */}
       {assets && assets.length > 0 && (
         <div className="rounded-xl border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] p-4">
-          <h4 className="text-xs font-medium text-[var(--wui-color-text-tertiary)] uppercase tracking-wide mb-1.5">
+          <h4 className="text-xs font-medium text-[var(--wui-color-text-secondary)] uppercase tracking-wide mb-1.5">
             Assets
           </h4>
           <p className="text-xs text-[var(--wui-color-text-secondary)] leading-relaxed mb-2">
@@ -79,7 +62,7 @@ export function AddToWalletPanel({
             >
               <span className="text-sm text-[var(--wui-color-text-secondary)] truncate mr-3 flex items-center gap-1.5">
                 {asset.name}{' '}
-                <span className="text-[var(--wui-color-text-tertiary)]">
+                <span className="text-[var(--wui-color-text-secondary)]">
                   (ID {asset.assetId})
                 </span>
               </span>
