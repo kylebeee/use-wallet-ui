@@ -9,6 +9,8 @@ export { TransactionFlow } from './components/TransactionFlow'
 export type { TransactionFlowProps } from './components/TransactionFlow'
 export { TransactionReview } from './components/TransactionReview'
 export type { TransactionReviewProps } from './components/TransactionReview'
+export { TransactionDetail } from './components/TransactionDetail'
+export type { TransactionDetailProps } from './components/TransactionDetail'
 
 // Shared UI
 export { AlgoSymbol } from './components/AlgoSymbol'

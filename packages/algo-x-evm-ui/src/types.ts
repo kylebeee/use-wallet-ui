@@ -24,6 +24,44 @@ export interface TransactionData {
   freezeTarget?: string
   freezeTargetShort?: string
   isFreezing?: boolean
+  // Common fields
+  fee?: number | string
+  firstValid?: number | string
+  lastValid?: number | string
+  genesisID?: string
+  genesisHash?: string
+  group?: string
+  lease?: string
+  note?: string
+  // App call fields
+  onComplete?: string
+  appArgs?: string[]
+  appAccounts?: string[]
+  appForeignApps?: string[]
+  appForeignAssets?: string[]
+  approvalProgram?: string
+  clearProgram?: string
+  // Key registration fields
+  voteKey?: string
+  selectionKey?: string
+  stateProofKey?: string
+  voteFirst?: number | string
+  voteLast?: number | string
+  voteKeyDilution?: number | string
+  nonParticipation?: boolean
+  // Asset config fields
+  assetTotal?: string
+  assetDecimals?: number
+  assetDefaultFrozen?: boolean
+  assetManager?: string
+  assetReserve?: string
+  assetFreeze?: string
+  assetClawback?: string
+  assetUnitName?: string
+  assetName?: string
+  assetURL?: string
+  // Asset transfer fields
+  assetSender?: string
 }
 
 export type TransactionDanger = 'rekey' | 'closeTo' | false

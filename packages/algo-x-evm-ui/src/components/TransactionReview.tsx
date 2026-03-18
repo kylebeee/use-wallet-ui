@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { TransactionFlow } from './TransactionFlow'
+import { TransactionDetail } from './TransactionDetail'
 import { useTransactionData } from '../hooks/useTransactionData'
 import type { TransactionData, TransactionDanger, AssetLookupClient } from '../types'
 
@@ -74,9 +75,29 @@ export function TransactionReview({
     network,
   })
 
+  /** Index into transactions array for detail view, or null for list view */
+  const [detailIndex, setDetailIndex] = useState<number | null>(null)
+
   const networkName = resolveNetworkName(genesisHash, genesisID)
   const unknownNetwork = genesisHash != null && !networkName
 
+  // Detail view — replaces entire dialog content
+  if (detailIndex !== null) {
+    const txn = transactions[detailIndex]
+    return (
+      <TransactionDetail
+        txn={txn}
+        assetInfo={txn.assetIndex ? assets[txn.assetIndex.toString()] : undefined}
+        position={detailIndex + 1}
+        groupSize={transactions.length}
+        onBack={() => setDetailIndex(null)}
+        onPrev={() => setDetailIndex(detailIndex - 1)}
+        onNext={() => setDetailIndex(detailIndex + 1)}
+      />
+    )
+  }
+
+  // List view — default
   return (
     <div className="flex flex-col">
       {/* Header */}
@@ -137,12 +158,17 @@ export function TransactionReview({
           </div>
         ) : (
           <div className="space-y-2">
-            {transactions.map((txn) => (
+            {transactions.map((txn, i) => (
               <div
                 key={txn.index}
-                className="rounded-sm border p-3 border-[var(--wui-color-primary)] bg-[var(--wui-color-bg-secondary)]"
+                className="rounded-xl border p-3 border-[var(--wui-color-primary)] bg-[var(--wui-color-bg-secondary)]"
               >
-                <TransactionFlow txn={txn} assetInfo={txn.assetIndex ? assets[txn.assetIndex.toString()] : undefined} appEscrows={appEscrows} />
+                <TransactionFlow
+                  txn={txn}
+                  assetInfo={txn.assetIndex ? assets[txn.assetIndex.toString()] : undefined}
+                  appEscrows={appEscrows}
+                  onExpand={() => setDetailIndex(i)}
+                />
               </div>
             ))}
           </div>

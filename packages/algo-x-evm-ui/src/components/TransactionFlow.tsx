@@ -5,120 +5,192 @@ export interface TransactionFlowProps {
   txn: TransactionData
   assetInfo?: AssetInfo
   appEscrows?: Record<string, string>
+  onExpand?: () => void
 }
 
-export function TransactionFlow({ txn, assetInfo, appEscrows = {} }: TransactionFlowProps) {
+export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: TransactionFlowProps) {
   const resolveAddr = (full: string | undefined, short: string): string =>
     (full && appEscrows[full]) || short
 
-  const renderFlowLine = (
-    from: string,
-    label: string,
-    to: string,
-    isDanger: boolean = false,
-    isSecondary: boolean = false,
-  ) => (
-    <div className={`grid grid-cols-[1fr_auto_1fr] w-full items-center font-mono text-xs ${isSecondary ? 'mt-1' : ''}`}>
-      <span className="text-[var(--wui-color-text-secondary)] text-left">{from}</span>
-      <span className="flex items-center justify-center gap-1 px-1">
-        <span className="text-[var(--wui-color-text-tertiary)]">--[</span>
-        <span className={isDanger ? 'text-[var(--wui-color-danger-text)] font-bold' : 'text-[var(--wui-color-primary)] font-medium'}>
-          {label}
-        </span>
-        <span className="text-[var(--wui-color-text-tertiary)]">]--&gt;</span>
-      </span>
-      <span className={`text-right ${isDanger ? 'text-[var(--wui-color-danger-text)] font-bold' : 'text-[var(--wui-color-text-secondary)]'}`}>{to}</span>
-    </div>
-  )
+  const isOptIn =
+    txn.type === 'axfer' &&
+    txn.sender === txn.receiver &&
+    (txn.rawAmount === 0n || txn.rawAmount === '0' || txn.rawAmount === undefined)
 
-  const renderRemainderLine = (to: string) => (
-    <div className="grid grid-cols-[1fr_auto_1fr] w-full items-center font-mono text-xs mt-1">
-      <span />
-      <span className="flex items-center justify-center gap-1 px-1">
-        <span className="text-[var(--wui-color-text-tertiary)]">--[</span>
-        <span className="text-[var(--wui-color-danger-text)] font-bold">remainder</span>
-        <span className="text-[var(--wui-color-text-tertiary)]">]--&gt;</span>
-      </span>
-      <span className="text-[var(--wui-color-danger-text)] font-bold text-right">{to}</span>
-    </div>
-  )
+  const amountDisplay = (): string => {
+    if (txn.type === 'pay') return txn.amount || '0 ALGO'
+    if (txn.type === 'axfer') {
+      return assetInfo
+        ? formatAssetAmount(txn.rawAmount, assetInfo)
+        : `${txn.amount || '0'} ${assetLabel(txn)}`
+    }
+    return ''
+  }
 
-  const renderRekeyLine = (from: string, to: string) => (
-    <div className="grid grid-cols-[1fr_auto_1fr] w-full items-center font-mono text-xs mt-1">
-      <span className="text-[var(--wui-color-text-secondary)] text-left">{from}</span>
-      <span className="flex items-center justify-center gap-1 px-1">
-        <span className="text-[var(--wui-color-text-tertiary)]">--[</span>
-        <span className="text-[var(--wui-color-danger-text)] font-bold">REKEY</span>
-        <span className="text-[var(--wui-color-text-tertiary)]">]--&gt;</span>
-      </span>
-      <span className="text-[var(--wui-color-danger-text)] font-bold text-right">{to}</span>
-    </div>
-  )
+  const hasRekey = !!txn.rekeyToShort
+  const hasClose = !!txn.closeRemainderToShort
+
+  /** Summary line per transaction type */
+  const renderSummary = () => {
+    const fiveCol = 'grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center text-xs'
+    const threeCol = 'grid grid-cols-[1fr_auto_auto] items-center text-xs'
+    const arrow = <span className="text-[var(--wui-color-text-tertiary)] px-2">&rarr;</span>
+    const dash = <span className="text-[var(--wui-color-text-tertiary)] px-2">&mdash;</span>
+
+    switch (txn.type) {
+      case 'pay':
+        return (
+          <div className={fiveCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {arrow}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">{amountDisplay()}</span>
+            {arrow}
+            <span className="text-[var(--wui-color-text-secondary)] truncate text-right">{resolveAddr(txn.receiver, txn.receiverShort!)}</span>
+          </div>
+        )
+
+      case 'axfer':
+        if (isOptIn) {
+          return (
+            <div className={threeCol}>
+              <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+              {dash}
+              <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">
+                Opt In {assetLabel(txn, assetInfo)}
+              </span>
+            </div>
+          )
+        }
+        return (
+          <div className={fiveCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {arrow}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">{amountDisplay()}</span>
+            {arrow}
+            <span className="text-[var(--wui-color-text-secondary)] truncate text-right">{resolveAddr(txn.receiver, txn.receiverShort!)}</span>
+          </div>
+        )
+
+      case 'afrz':
+        return (
+          <div className={fiveCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {arrow}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">
+              {txn.isFreezing ? 'Freeze' : 'Unfreeze'} {assetLabel(txn, assetInfo)}
+            </span>
+            {arrow}
+            <span className="text-[var(--wui-color-text-secondary)] truncate text-right">{txn.freezeTargetShort}</span>
+          </div>
+        )
+
+      case 'acfg':
+        return (
+          <div className={threeCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {dash}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">
+              Configure {txn.assetIndex ? assetLabel(txn, assetInfo) : 'New Asset'}
+            </span>
+          </div>
+        )
+
+      case 'appl':
+        return (
+          <div className={fiveCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {arrow}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap text-center">App Call</span>
+            {arrow}
+            <span className="text-[var(--wui-color-text-secondary)] whitespace-nowrap text-right">
+              {txn.appIndex ? `#${txn.appIndex}` : 'New App'}
+            </span>
+          </div>
+        )
+
+      case 'keyreg':
+        return (
+          <div className={threeCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {dash}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">Key Registration</span>
+          </div>
+        )
+
+      default:
+        return (
+          <div className={threeCol}>
+            <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.senderShort}</span>
+            {dash}
+            <span className="text-[var(--wui-color-primary)] font-medium whitespace-nowrap">{txn.typeLabel}</span>
+          </div>
+        )
+    }
+  }
+
+  const renderWarnings = () => {
+    if (!hasRekey && !hasClose) return null
+    return (
+      <div className="flex flex-col gap-1 mt-1.5">
+        {hasRekey && (
+          <div className="flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 bg-[var(--wui-color-danger-bg)]">
+            <span className="text-[var(--wui-color-danger-text)] font-bold">REKEY</span>
+            <span className="text-[var(--wui-color-danger-text)]">
+              {txn.senderShort} &rarr; {txn.rekeyToShort}
+            </span>
+          </div>
+        )}
+        {hasClose && (
+          <div className="flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 bg-[var(--wui-color-danger-bg)]">
+            <span className="text-[var(--wui-color-danger-text)] font-bold">CLOSE</span>
+            <span className="text-[var(--wui-color-danger-text)]">
+              Remainder &rarr; {txn.closeRemainderToShort}
+            </span>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-0">
-      {/* Payment transaction */}
-      {txn.type === 'pay' && txn.receiverShort && (
-        <>
-          {renderFlowLine(txn.senderShort, txn.amount || '0 ALGO', resolveAddr(txn.receiver, txn.receiverShort))}
-          {txn.closeRemainderToShort && renderRemainderLine(txn.closeRemainderToShort)}
-        </>
+    <div>
+      {/* Summary row + expand toggle */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">{renderSummary()}</div>
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-tertiary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
+            aria-label="Show details"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Note */}
+      {txn.note && (
+        <div className="flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 mt-1.5 bg-[var(--wui-color-bg-tertiary)]">
+          <span className="text-[var(--wui-color-text-tertiary)] font-medium">NOTE</span>
+          <span className="text-[var(--wui-color-text-secondary)] truncate">{txn.note}</span>
+        </div>
       )}
 
-      {/* Asset transfer */}
-      {txn.type === 'axfer' && txn.receiverShort && (
-        <>
-          {renderFlowLine(
-            txn.senderShort,
-            assetInfo ? formatAssetAmount(txn.rawAmount, assetInfo) : `${txn.amount || '0'} ${assetLabel(txn)}`,
-            resolveAddr(txn.receiver, txn.receiverShort),
-          )}
-          {txn.closeRemainderToShort && renderRemainderLine(txn.closeRemainderToShort)}
-        </>
-      )}
-
-      {/* Asset freeze */}
-      {txn.type === 'afrz' && txn.freezeTargetShort && (
-        <>
-          {renderFlowLine(
-            txn.senderShort,
-            `${txn.isFreezing ? 'Freeze' : 'Unfreeze'} ${assetLabel(txn, assetInfo)}`,
-            txn.freezeTargetShort,
-          )}
-        </>
-      )}
-
-      {/* Asset config */}
-      {txn.type === 'acfg' && (
-        <>
-          {renderFlowLine(
-            txn.senderShort,
-            `Configure ${txn.assetIndex ? assetLabel(txn, assetInfo) : 'NEW'}`,
-            txn.senderShort,
-          )}
-        </>
-      )}
-
-      {/* Application call */}
-      {txn.type === 'appl' && (
-        <>
-          {renderFlowLine(
-            txn.senderShort,
-            'APP CALL',
-            `App ${txn.appIndex || 'NEW'}`,
-          )}
-        </>
-      )}
-
-      {/* Key registration */}
-      {txn.type === 'keyreg' && (
-        <>
-          {renderFlowLine(txn.senderShort, 'KEY REG', txn.senderShort)}
-        </>
-      )}
-
-      {/* Rekey (applies to any transaction type) */}
-      {txn.rekeyToShort && renderRekeyLine(txn.senderShort, txn.rekeyToShort)}
+      {/* Warnings (always visible) */}
+      {renderWarnings()}
     </div>
   )
 }
