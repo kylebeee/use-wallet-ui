@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { CachedAsset } from '../cache/assetCache'
+import { BackButton } from './BackButton'
 import { CopyButton } from './CopyButton'
+import { ChevronDown, VerifiedBadge } from './icons'
 import { Spinner } from './Spinner'
 import { TransactionStatus, type TransactionStatusValue } from './TransactionStatus'
 
@@ -66,25 +68,7 @@ export function ReceivePanel({
     <>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={onBack}
-          className="-ml-1 p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center"
-          title="Back"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
+        <BackButton onClick={onBack} />
         <h3 className="text-lg font-bold leading-none text-[var(--wui-color-text)] wallet-custom-font">Receive</h3>
         {registryLoading && (
           <div className="ml-auto flex items-center gap-1 text-xs text-[var(--wui-color-text-secondary)]">
@@ -123,20 +107,7 @@ export function ReceivePanel({
               className="w-full flex items-center justify-between px-3 py-2 text-xs text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text)] transition-colors focus:outline-none"
             >
               <span>EVM Controller</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ transform: evmExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+              <ChevronDown size={12} style={{ transform: evmExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
             </button>
             {evmExpanded && (
               <div className="px-3 pb-2.5">
@@ -268,21 +239,6 @@ export function ReceivePanel({
         </button>
       )}
     </>
-  )
-}
-
-function VerifiedBadge() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="var(--wui-color-primary)"
-      className="inline-block ml-1 -mt-0.5"
-    >
-      <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
   )
 }
 

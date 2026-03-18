@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { BackButton } from './BackButton'
 import { CopyButton } from './CopyButton'
 import { ExternalLinkIcon } from './ExternalLinkIcon'
+import { CheckCircleFilled, XCircleFilled } from './icons'
 import { Spinner } from './Spinner'
 
 export interface BridgeChainDisplay {
@@ -228,26 +230,7 @@ export function BridgePanel({
       {!hideHeader && (
         <div className="flex items-center gap-2 mb-4">
           {onBack && (
-            <button
-              onClick={onBack}
-              disabled={isProcessing}
-              className="-ml-1 p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center disabled:opacity-40"
-              title="Back"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
+            <BackButton onClick={onBack} disabled={isProcessing} />
           )}
           <h3 className="text-lg font-bold leading-none text-[var(--wui-color-text)] wallet-custom-font">Bridge</h3>
         </div>
@@ -481,13 +464,7 @@ export function BridgePanel({
       {/* Success */}
       {status === 'success' && (
         <div className="text-center py-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <CheckCircleFilled className="h-8 w-8 mx-auto mb-2 text-green-500" />
           {receivedAmount && destinationTokenSymbol && (
             <p className="mt-1.5 text-sm text-[var(--wui-color-text-secondary)]">
               {sourceChainSymbol === 'ALG' ? 'Sent' : 'Received'}{' '}
@@ -544,13 +521,7 @@ export function BridgePanel({
       {/* Error panel */}
       {status === 'error' && (
         <div className="text-center py-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <XCircleFilled className="h-8 w-8 mx-auto mb-2 text-red-500" />
           <p className="text-sm font-medium text-[var(--wui-color-text)] mb-1">Bridge failed</p>
           {error && <p className="text-xs text-red-500 break-words mb-1.5">{error}</p>}
           {sourceTxId && (
@@ -587,15 +558,7 @@ interface BridgeProgressProps {
 }
 
 function CheckIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-500 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-      <path
-        fillRule="evenodd"
-        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-        clipRule="evenodd"
-      />
-    </svg>
-  )
+  return <CheckCircleFilled className="h-3.5 w-3.5 text-green-500 shrink-0" />
 }
 
 function Countdown({ estimatedTimeMs, waitingSince }: { estimatedTimeMs: number; waitingSince: number }) {

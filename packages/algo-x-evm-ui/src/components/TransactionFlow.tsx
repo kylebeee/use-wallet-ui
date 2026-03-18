@@ -1,5 +1,6 @@
 import type { TransactionData, AssetInfo } from '../types'
 import { formatAssetAmount, assetLabel } from '../formatters'
+import { ChevronRight } from './icons'
 
 export interface TransactionFlowProps {
   txn: TransactionData
@@ -164,19 +165,7 @@ export function TransactionFlow({ txn, assetInfo, appEscrows = {}, onExpand }: T
             className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-tertiary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
             aria-label="Show details"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            <ChevronRight size={14} />
           </button>
         )}
       </div>

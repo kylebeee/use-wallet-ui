@@ -1,5 +1,7 @@
 import type { TransactionData, AssetInfo } from '../types'
 import { formatAssetAmount, assetLabel } from '../formatters'
+import { BackButton } from './BackButton'
+import { ChevronLeft, ChevronRight } from './icons'
 
 export interface TransactionDetailProps {
   txn: TransactionData
@@ -95,26 +97,7 @@ export function TransactionDetail({
     <div className="flex flex-col">
       {/* Header with back button */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
-          aria-label="Back to transactions"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
+        <BackButton onClick={onBack} variant="round" aria-label="Back to transactions" />
         <h2 className="text-lg font-bold text-[var(--wui-color-text)]">
           Transaction Details
         </h2>
@@ -147,19 +130,7 @@ export function TransactionDetail({
             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-secondary)] disabled:opacity-30 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
             aria-label="Previous transaction"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <ChevronLeft size={16} />
           </button>
           <span className="text-xs text-[var(--wui-color-text-tertiary)]">
             {position} of {groupSize}
@@ -171,19 +142,7 @@ export function TransactionDetail({
             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--wui-color-bg-tertiary)] transition-colors text-[var(--wui-color-text-secondary)] disabled:opacity-30 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wui-color-primary)] focus-visible:ring-offset-1"
             aria-label="Next transaction"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="9 6 15 12 9 18" />
-            </svg>
+            <ChevronRight size={16} />
           </button>
         </div>
       )}

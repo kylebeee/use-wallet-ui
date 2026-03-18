@@ -15,6 +15,8 @@ export type { TransactionDetailProps } from './components/TransactionDetail'
 // Shared UI
 export { AddToWalletPanel } from './components/AddToWalletPanel'
 export type { AddToWalletPanelProps } from './components/AddToWalletPanel'
+export { BackButton } from './components/BackButton'
+export type { BackButtonProps } from './components/BackButton'
 export { AlgoSymbol } from './components/AlgoSymbol'
 export { Spinner } from './components/Spinner'
 export { TransactionStatus } from './components/TransactionStatus'

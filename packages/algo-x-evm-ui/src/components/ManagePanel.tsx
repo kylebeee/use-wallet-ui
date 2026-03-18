@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { AddToWalletPanel, type AddToWalletPanelProps } from './AddToWalletPanel'
 import { AlgoSymbol } from './AlgoSymbol'
+import { BackButton } from './BackButton'
 import { BridgePanel, type BridgePanelProps } from './BridgePanel'
+import { ArrowDownLeft, ArrowUpRight, ArrowsExchange, ChevronsUpDown, RefreshCw, Search } from './icons'
 import { ReceivePanel, type ReceivePanelProps } from './ReceivePanel'
 import { SendPanel, type SendPanelProps } from './SendPanel'
 
@@ -107,25 +109,7 @@ export function ManagePanel({
       <>
         {/* Header with back arrow */}
         <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={onBack}
-            className="-ml-1 p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center"
-            title="Back"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
+          <BackButton onClick={onBack} />
           <h3 className="text-lg font-bold leading-none text-[var(--wui-color-text)] wallet-custom-font">
             Manage Algo x EVM Account
           </h3>
@@ -136,21 +120,7 @@ export function ManagePanel({
               className="ml-auto p-1 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] flex items-center justify-center disabled:pointer-events-none"
               title="Refresh"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={isRefreshing ? 'animate-spin' : ''}
-              >
-                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-              </svg>
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
           )}
         </div>
@@ -170,21 +140,7 @@ export function ManagePanel({
               title={showAvailableBalance ? 'Show total balance' : 'Show available balance'}
             >
               {showAvailableBalance ? 'Available' : 'Total'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="ml-0.5 opacity-80"
-              >
-                <path d="m17 10-5-5-5 5" />
-                <path d="m17 14-5 5-5-5" />
-              </svg>
+              <ChevronsUpDown size={10} className="ml-0.5 opacity-80" />
             </button>
           </div>
         </div>
@@ -220,20 +176,7 @@ export function ManagePanel({
                         className="inline-flex items-center justify-center w-4 h-4 rounded-xs border border-[var(--wui-color-border)] text-[var(--wui-color-text-tertiary)] hover:text-[var(--wui-color-text-secondary)] hover:border-[var(--wui-color-text-tertiary)] transition-colors shrink-0"
                         title={`Send ${asset.unitName || asset.name}`}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="10"
-                          height="10"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M7 17 17 7" />
-                          <path d="M7 7h10v10" />
-                        </svg>
+                        <ArrowUpRight size={10} strokeWidth={2.5} />
                       </button>
                     )}
                   </span>
@@ -264,19 +207,7 @@ export function ManagePanel({
             disabled={!send}
             className="py-2.5 px-4 bg-[var(--wui-color-bg-tertiary)] text-[var(--wui-color-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 mr-1.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M7 17 17 7" />
-              <path d="M7 7h10v10" />
-            </svg>
+            <ArrowUpRight className="h-4 w-4 mr-1.5" />
             Send
           </button>
           <button
@@ -284,19 +215,7 @@ export function ManagePanel({
             disabled={!optIn}
             className="py-2.5 px-4 bg-[var(--wui-color-bg-tertiary)] text-[var(--wui-color-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 mr-1.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M17 7 7 17" />
-              <path d="M17 17H7V7" />
-            </svg>
+            <ArrowDownLeft className="h-4 w-4 mr-1.5" />
             Receive
           </button>
           <button
@@ -304,25 +223,7 @@ export function ManagePanel({
             disabled={!bridge && !onBridgeClick}
             className="py-2.5 px-4 bg-[var(--wui-color-bg-tertiary)] text-[var(--wui-color-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 mr-1.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M8 3l4 4-4 4" />
-              <path d="M16 3l-4 4 4 4" />
-              <path d="M12 7H4" />
-              <path d="M12 7h8" />
-              <path d="M8 21l4-4-4-4" />
-              <path d="M16 21l-4-4 4-4" />
-              <path d="M12 17H4" />
-              <path d="M12 17h8" />
-            </svg>
+            <ArrowsExchange className="h-4 w-4 mr-1.5" />
             Bridge
           </button>
           <button
@@ -330,19 +231,7 @@ export function ManagePanel({
             disabled={!onExplore}
             className="py-2.5 px-4 bg-[var(--wui-color-bg-tertiary)] text-[var(--wui-color-text)] font-medium rounded-xl hover:brightness-90 transition-all text-sm flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 mr-1.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
+            <Search className="h-4 w-4 mr-1.5" />
             Explore
           </button>
           {addToWallet && (
