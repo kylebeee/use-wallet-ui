@@ -1,5 +1,5 @@
 // Types
-export type { TransactionData, TransactionDanger, AssetInfo, AssetLookupClient } from './types'
+export type { TransactionData, TransactionDanger, AssetInfo, AssetLookupClient, WalletAdapter, AssetSearchProvider, BridgeWalletAdapter } from './types'
 
 // Formatters
 export { formatAssetAmount, assetLabel } from './formatters'
@@ -39,3 +39,19 @@ export type { CachedAsset } from './cache/assetCache'
 // Hooks
 export { useAssets } from './hooks/useAssets'
 export { useTransactionData } from './hooks/useTransactionData'
+export { useAssetLookup } from './hooks/useAssetLookup'
+export type { AssetLookupInfo, UseAssetLookupReturn } from './hooks/useAssetLookup'
+export { useAssetNameSearch } from './hooks/useAssetNameSearch'
+export type { UseAssetNameSearchReturn } from './hooks/useAssetNameSearch'
+export { useSendPanel } from './hooks/useSendPanel'
+export type { UseSendPanelReturn, ReceiverOptInStatus } from './hooks/useSendPanel'
+export { useReceivePanel } from './hooks/useReceivePanel'
+export type { UseReceivePanelReturn } from './hooks/useReceivePanel'
+export { useAssetRegistry } from './hooks/useAssetRegistry'
+export type { UseAssetRegistryReturn } from './hooks/useAssetRegistry'
+export { useBridgePanel, BRIDGE_PERSIST_KEY } from './hooks/useBridgePanel'
+export type { UseBridgePanelReturn, UseBridgeOptions, BridgeChain, BridgeToken, BridgeStatus } from './hooks/useBridgePanel'
+export type { BridgeTransferStatus as BridgeHookTransferStatus } from './hooks/useBridgePanel'
+
+// Services (re-exported for advanced consumers)
+export type { EIP1193Provider } from './services/evmProviderAdapter'

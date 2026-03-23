@@ -79,3 +79,42 @@ export interface AssetInfo {
 export interface AssetLookupClient {
   getAssetByID(id: number): { do(): Promise<{ params: { decimals: number; name?: string; unitName?: string } }> }
 }
+
+// ---------------------------------------------------------------------------
+// Adapter interfaces for dependency injection
+// ---------------------------------------------------------------------------
+
+import type algosdk from 'algosdk'
+import type { CachedAsset } from './cache/assetCache'
+
+/**
+ * Wallet primitives that consumers inject into panel state hooks.
+ * Decouples state management from any specific wallet provider.
+ */
+export interface WalletAdapter {
+  activeAddress: string | null
+  algodClient: algosdk.Algodv2 | null
+  signTransactions: (txns: Uint8Array[]) => Promise<(Uint8Array | null)[]>
+  /** Called after a transaction is confirmed (e.g. to invalidate queries). */
+  onTransactionSuccess?: () => void
+}
+
+/**
+ * Asset name search provider — consumers supply their own registry implementation.
+ */
+export interface AssetSearchProvider {
+  searchByName: (query: string, limit?: number) => Promise<CachedAsset[]>
+  registryLoading: boolean
+}
+
+import type { EIP1193Provider } from './services/evmProviderAdapter'
+
+/**
+ * Extended wallet adapter for bridge operations.
+ * Adds EVM-specific fields needed for cross-chain bridging.
+ */
+export interface BridgeWalletAdapter extends WalletAdapter {
+  evmAddress: string | null
+  isAlgoXEvm: boolean
+  getEvmProvider?: () => Promise<EIP1193Provider>
+}
