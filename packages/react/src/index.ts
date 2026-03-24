@@ -23,6 +23,7 @@ export { WalletUIProvider, useWalletUI, useBeforeSignDialog, useAfterSignDialog,
 export type { RainbowKitUIConfig } from './providers/WalletUIProvider'
 export { useBridgeDialog } from './providers/BridgeDialogProvider'
 export type { BridgeDialogContextType } from './providers/BridgeDialogProvider'
+export { mapBridgeToPanelProps } from './utils/bridgePropsMapper'
 
 export { getDefaultConfig } from './rainbowkit'
 
