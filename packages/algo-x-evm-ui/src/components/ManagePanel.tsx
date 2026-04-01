@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AddToWalletPanel, type AddToWalletPanelProps } from './AddToWalletPanel'
 import { AlgoSymbol } from './AlgoSymbol'
 import { BackButton } from './BackButton'
@@ -41,6 +41,10 @@ export interface ManagePanelProps {
   walletName?: string | null
   walletIcon?: string | null
   onDisconnect?: () => void
+  /** List of available accounts for switching */
+  accounts?: { address: string; displayName?: string | null; icon?: string | null }[]
+  /** Called when user selects a different account */
+  onAccountSwitch?: (address: string) => void
   /** Enable two-column layout via container query at the given width (default: off) */
   wideBreakpoint?: number
 }
@@ -89,6 +93,8 @@ export function ManagePanel({
   walletName,
   walletIcon,
   onDisconnect,
+  accounts,
+  onAccountSwitch,
   wideBreakpoint,
 }: ManagePanelProps) {
   type Mode = 'main' | 'send' | 'opt-in' | 'bridge' | 'add-to-wallet'
@@ -96,6 +102,8 @@ export function ManagePanel({
   const [showAllAssets, setShowAllAssets] = useState(false)
   const [animDir, setAnimDir] = useState<'forward' | 'back' | 'none'>('none')
   const [isCopied, setIsCopied] = useState(false)
+  const [accountSwitcherOpen, setAccountSwitcherOpen] = useState(false)
+  const accountSwitcherRef = useRef<HTMLDivElement>(null)
 
   const handleCopyAddress = useCallback(() => {
     if (!activeAddress) return
@@ -114,6 +122,18 @@ export function ManagePanel({
     setMode('main')
     resetFn?.()
   }, [])
+
+  // Close account switcher on click outside
+  useEffect(() => {
+    if (!accountSwitcherOpen) return
+    const handler = (e: MouseEvent) => {
+      if (accountSwitcherRef.current && !accountSwitcherRef.current.contains(e.target as Node)) {
+        setAccountSwitcherOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [accountSwitcherOpen])
 
   const handleOptOut = send && optIn ? (assetIndex: number) => {
     const asset = assets?.find((a) => a.assetId === assetIndex)
@@ -148,19 +168,49 @@ export function ManagePanel({
               </span>
             )}
           </div>
-          {walletName && (
-            <span className="wui-header-sub text-xs text-[var(--wui-color-text-secondary)] shrink-0">
-              {walletName}
-            </span>
+          <button
+            onClick={handleCopyAddress}
+            className="p-1.5 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center shrink-0"
+            title="Copy address"
+          >
+            {isCopied ? <Check size={14} className="text-green-500" /> : <Clipboard size={14} />}
+          </button>
+          {accounts && accounts.length > 1 && onAccountSwitch && (
+            <div ref={accountSwitcherRef} className="relative shrink-0">
+              <button
+                onClick={() => setAccountSwitcherOpen((v) => !v)}
+                className="p-1.5 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center"
+                title="Switch account"
+              >
+                <ChevronsUpDown size={14} />
+              </button>
+              {accountSwitcherOpen && (
+                <div className="absolute z-50 mt-1 right-0 min-w-[200px] max-h-[200px] overflow-y-auto rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg)] shadow-lg">
+                  {accounts.map((acct) => (
+                    <button
+                      key={acct.address}
+                      type="button"
+                      onClick={() => {
+                        onAccountSwitch(acct.address)
+                        setAccountSwitcherOpen(false)
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--wui-color-bg-secondary)] text-left ${
+                        acct.address === activeAddress ? 'bg-[var(--wui-color-bg-secondary)] font-medium' : ''
+                      } text-[var(--wui-color-text)]`}
+                    >
+                      {acct.icon && (
+                        <img src={acct.icon} alt="" width={16} height={16} className="rounded shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {acct.displayName || formatShortAddr(acct.address)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <div className="wui-header-actions ml-auto flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={handleCopyAddress}
-              className="p-1.5 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center"
-              title="Copy address"
-            >
-              {isCopied ? <Check size={14} className="text-green-500" /> : <Clipboard size={14} />}
-            </button>
             {onRefresh && (
               <button
                 onClick={onRefresh}

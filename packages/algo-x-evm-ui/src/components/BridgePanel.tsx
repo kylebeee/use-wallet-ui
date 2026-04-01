@@ -390,7 +390,7 @@ export function BridgePanel({
                 onChange={onSourceChainChange}
                 options={sourceChainOptions}
                 className="flex-1"
-
+                hideIcons
               />
               <AssetSelect
                 value={sourceTokenSymbol ?? ''}
@@ -442,7 +442,7 @@ export function BridgePanel({
                   onChange={onDestinationChainChange}
                   options={destChainOptions}
                   className="flex-1"
-  
+                  hideIcons
                 />
               ) : (
                 <div className="flex-1 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text-secondary)]">
