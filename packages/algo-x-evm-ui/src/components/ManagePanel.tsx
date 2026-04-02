@@ -33,6 +33,8 @@ export interface ManagePanelProps {
   onExplore?: () => void
   /** When provided, the Bridge button calls this instead of navigating to the embedded bridge panel */
   onBridgeClick?: () => void
+  /** Called when the user navigates to the embedded bridge panel (e.g. to enable data loading) */
+  onBridgeEnter?: () => void
   addToWallet?: Omit<AddToWalletPanelProps, 'onBack'>
   /** Connected wallet info — when provided, shows address, wallet identity, copy & disconnect */
   activeAddress?: string | null
@@ -87,6 +89,7 @@ export function ManagePanel({
   isRefreshing,
   onExplore,
   onBridgeClick,
+  onBridgeEnter,
   addToWallet,
   activeAddress,
   displayName,
@@ -360,7 +363,7 @@ export function ManagePanel({
         <ArrowDownLeft className="h-4 w-4 mr-1.5" />
         Receive
       </button>
-      <button onClick={onBridgeClick ?? (() => goForward('bridge'))} disabled={!bridge && !onBridgeClick} className={actionBtnClass}>
+      <button onClick={onBridgeClick ?? (() => { onBridgeEnter?.(); goForward('bridge') })} disabled={!bridge && !onBridgeClick} className={actionBtnClass}>
         <ArrowsExchange className="h-4 w-4 mr-1.5" />
         Bridge
       </button>
@@ -527,7 +530,7 @@ export function ManagePanel({
                 <ArrowDownLeft className="h-4 w-4 mr-1.5" />
                 Receive
               </button>
-              <button onClick={onBridgeClick ?? (() => goForward('bridge'))} disabled={!bridge && !onBridgeClick} className={sideActionBtnClass('bridge')}>
+              <button onClick={onBridgeClick ?? (() => { onBridgeEnter?.(); goForward('bridge') })} disabled={!bridge && !onBridgeClick} className={sideActionBtnClass('bridge')}>
                 <ArrowsExchange className="h-4 w-4 mr-1.5" />
                 Bridge
               </button>

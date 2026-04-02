@@ -9,6 +9,7 @@ export interface BridgeDialogContextType {
   closeBridge: () => void
   minimizeBridge: () => void
   restoreBridge: () => void
+  enableBridge: () => void
 }
 
 const BridgeDialogContext = createContext<BridgeDialogContextType | undefined>(undefined)
@@ -30,7 +31,8 @@ export function BridgeDialogProvider({ children }: { children: ReactNode }) {
     try { return localStorage.getItem(BRIDGE_PERSIST_KEY) !== null } catch { return false }
   })
   const [isMinimized, setIsMinimized] = useState(false)
-  const bridge = useBridge({ enabled: isOpen })
+  const [isEnabled, setIsEnabled] = useState(false)
+  const bridge = useBridge({ enabled: isOpen || isEnabled })
   const prevStatusRef = useRef(bridge.status)
 
   const isProcessing = PROCESSING_STATUSES.has(bridge.status)
@@ -53,6 +55,10 @@ export function BridgeDialogProvider({ children }: { children: ReactNode }) {
 
   const restoreBridge = useCallback(() => {
     setIsMinimized(false)
+  }, [])
+
+  const enableBridge = useCallback(() => {
+    setIsEnabled(true)
   }, [])
 
   // Auto-close if wallet disconnects (bridge becomes unavailable).
@@ -87,8 +93,9 @@ export function BridgeDialogProvider({ children }: { children: ReactNode }) {
       closeBridge,
       minimizeBridge,
       restoreBridge,
+      enableBridge,
     }),
-    [bridge, isOpen, isMinimized, openBridge, closeBridge, minimizeBridge, restoreBridge],
+    [bridge, isOpen, isMinimized, openBridge, closeBridge, minimizeBridge, restoreBridge, enableBridge],
   )
 
   return <BridgeDialogContext.Provider value={value}>{children}</BridgeDialogContext.Provider>
