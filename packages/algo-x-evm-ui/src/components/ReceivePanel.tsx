@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CachedAsset } from '../cache/assetCache'
+import type { PeraAssetData } from '../services/peraApi'
 import { BackButton } from './BackButton'
 import { SecondaryButton } from './SecondaryButton'
 import { CopyButton } from './CopyButton'
-import { ChevronDown, VerifiedBadge } from './icons'
+import { ChevronDown, VerifiedBadge, SuspiciousBadge } from './icons'
 import { Spinner } from './Spinner'
 import { TransactionStatus, type TransactionStatusValue } from './TransactionStatus'
 
@@ -32,6 +33,10 @@ export interface ReceivePanelProps {
   isNameMode?: boolean
   evmAddress?: string | null
   onOptOut?: (assetIndex: number) => void
+  /** Pera asset data map for logos and verification tiers */
+  peraData?: Map<number, PeraAssetData>
+  /** Callback to fetch Pera data for a batch of asset IDs (e.g. search results) */
+  fetchPeraData?: (assetIds: number[]) => void
 }
 
 export function ReceivePanel({
@@ -58,8 +63,23 @@ export function ReceivePanel({
   isNameMode,
   evmAddress,
   onOptOut,
+  peraData,
+  fetchPeraData,
 }: ReceivePanelProps) {
   const [evmExpanded, setEvmExpanded] = useState(false)
+
+  // Fetch Pera data for search results as they appear
+  useEffect(() => {
+    if (!fetchPeraData || !nameSearchResults || nameSearchResults.length === 0) return
+    const ids = nameSearchResults.map((a) => a.index).filter((id) => !peraData?.has(id))
+    if (ids.length > 0) fetchPeraData(ids)
+  }, [nameSearchResults, fetchPeraData, peraData])
+
+  // Fetch Pera data for ID-mode asset lookup
+  useEffect(() => {
+    if (!fetchPeraData || !assetInfo || peraData?.has(assetInfo.index)) return
+    fetchPeraData([assetInfo.index])
+  }, [assetInfo, fetchPeraData, peraData])
 
   // Check if the resolved asset is already opted in
   const resolvedAssetIndex = isNameMode ? selectedNameAsset?.index : assetInfo?.index
@@ -159,6 +179,8 @@ export function ReceivePanel({
               name={assetInfo.name}
               unitName={assetInfo.unitName}
               index={assetInfo.index}
+              logo={peraData?.get(assetInfo.index)?.logo}
+              verificationTier={peraData?.get(assetInfo.index)?.verificationTier}
               isAlreadyOptedIn={isAlreadyOptedIn}
               onOptIn={handleOptIn}
               onOptOut={onOptOut}
@@ -176,27 +198,40 @@ export function ReceivePanel({
           {/* Name mode: Results list */}
           {isNameMode && !selectedNameAsset && nameSearchResults && nameSearchResults.length > 0 && !nameSearchLoading && (
             <div className="max-h-[200px] overflow-y-auto rounded-lg border border-[var(--wui-color-border)]">
-              {nameSearchResults.map((asset) => (
-                <button
-                  key={asset.index}
-                  onClick={() => onSelectNameAsset?.(asset)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[var(--wui-color-bg-secondary)] transition-colors border-b border-[var(--wui-color-border)] last:border-b-0"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--wui-color-text)] truncate">
-                        {asset.name}
-                        {asset.peraVerified && <VerifiedBadge />}
-                        {optedInAssetIds?.has(asset.index) && (
-                          <span className="ml-1.5 text-xs text-[var(--wui-color-text-secondary)]">(opted in)</span>
-                        )}
-                      </p>
-                      {asset.unitName && <p className="text-xs text-[var(--wui-color-text-secondary)]">{asset.unitName}</p>}
+              {nameSearchResults.map((asset) => {
+                const pera = peraData?.get(asset.index)
+                const tier = pera?.verificationTier
+                return (
+                  <button
+                    key={asset.index}
+                    onClick={() => onSelectNameAsset?.(asset)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[var(--wui-color-bg-secondary)] transition-colors border-b border-[var(--wui-color-border)] last:border-b-0"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {pera?.logo ? (
+                        <img src={pera.logo} alt={asset.name} width={24} height={24} className="rounded-full shrink-0 object-cover" loading="lazy" />
+                      ) : (
+                        <span className="w-6 h-6 rounded-full bg-[var(--wui-color-bg-tertiary)] shrink-0 flex items-center justify-center text-[10px] font-medium text-[var(--wui-color-text-secondary)]">
+                          {(asset.unitName || asset.name || '?').charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--wui-color-text)] truncate">
+                          {asset.name}
+                          {(tier === 'verified' || tier === 'trusted') && <VerifiedBadge />}
+                          {tier === 'suspicious' && <SuspiciousBadge />}
+                          {!tier && asset.peraVerified && <VerifiedBadge />}
+                          {optedInAssetIds?.has(asset.index) && (
+                            <span className="ml-1.5 text-xs text-[var(--wui-color-text-secondary)]">(opted in)</span>
+                          )}
+                        </p>
+                        {asset.unitName && <p className="text-xs text-[var(--wui-color-text-secondary)]">{asset.unitName}</p>}
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-xs text-[var(--wui-color-text-secondary)] shrink-0 ml-2">ID: {asset.index}</span>
-                </button>
-              ))}
+                    <span className="text-xs text-[var(--wui-color-text-secondary)] shrink-0 ml-2">ID: {asset.index}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -217,6 +252,8 @@ export function ReceivePanel({
               unitName={selectedNameAsset.unitName}
               index={selectedNameAsset.index}
               peraVerified={selectedNameAsset.peraVerified}
+              logo={peraData?.get(selectedNameAsset.index)?.logo}
+              verificationTier={peraData?.get(selectedNameAsset.index)?.verificationTier}
               isAlreadyOptedIn={isAlreadyOptedIn}
               onOptIn={handleOptIn}
               onOptOut={onOptOut}
@@ -246,6 +283,8 @@ function AssetCard({
   unitName,
   index,
   peraVerified,
+  logo,
+  verificationTier,
   isAlreadyOptedIn,
   onOptIn,
   onOptOut,
@@ -254,19 +293,34 @@ function AssetCard({
   unitName?: string
   index: number
   peraVerified?: boolean
+  logo?: string | null
+  verificationTier?: string
   isAlreadyOptedIn?: boolean
   onOptIn: () => void
   onOptOut?: (assetIndex: number) => void
 }) {
+  const showVerified = verificationTier === 'verified' || verificationTier === 'trusted' || (!verificationTier && peraVerified)
+  const showSuspicious = verificationTier === 'suspicious'
+
   return (
     <div className="bg-[var(--wui-color-bg-secondary)] rounded-lg p-3">
       <div className="flex justify-between items-start mb-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--wui-color-text)]">
-            {name}
-            {peraVerified && <VerifiedBadge />}
-          </p>
-          {unitName && <p className="text-xs text-[var(--wui-color-text-secondary)]">{unitName}</p>}
+        <div className="flex items-center gap-2">
+          {logo ? (
+            <img src={logo} alt={name} width={28} height={28} className="rounded-full shrink-0 object-cover" loading="lazy" />
+          ) : (
+            <span className="w-7 h-7 rounded-full bg-[var(--wui-color-bg-tertiary)] shrink-0 flex items-center justify-center text-xs font-medium text-[var(--wui-color-text-secondary)]">
+              {(unitName || name || '?').charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div>
+            <p className="text-sm font-medium text-[var(--wui-color-text)]">
+              {name}
+              {showVerified && <VerifiedBadge />}
+              {showSuspicious && <SuspiciousBadge />}
+            </p>
+            {unitName && <p className="text-xs text-[var(--wui-color-text-secondary)]">{unitName}</p>}
+          </div>
         </div>
         <span className="text-xs text-[var(--wui-color-text-secondary)]">ID: {index}</span>
       </div>

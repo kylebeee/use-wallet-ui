@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
+import { AlgoSymbol } from './AlgoSymbol'
+import { AssetSelect } from './AssetSelect'
 import { BackButton } from './BackButton'
 import { SecondaryButton } from './SecondaryButton'
 import type { AssetHoldingDisplay } from './ManagePanel'
@@ -87,6 +89,21 @@ export function SendPanel({
   const selectedValue = sendType === 'algo' ? 'algo' : assetIdInput
 
   const selectedAsset = accountAssets?.find((a) => String(a.assetId) === assetIdInput)
+
+  const assetOptions = useMemo(() => {
+    const opts: { value: string; label: string; logo?: string | null; icon?: React.ReactNode; verificationTier?: AssetHoldingDisplay['verificationTier'] }[] = [{ value: 'algo', label: 'ALGO', icon: <AlgoSymbol scale={1} /> }]
+    if (accountAssets) {
+      for (const a of accountAssets) {
+        opts.push({
+          value: String(a.assetId),
+          label: a.unitName || a.name,
+          logo: a.logo,
+          verificationTier: a.verificationTier,
+        })
+      }
+    }
+    return opts
+  }, [accountAssets])
 
   const sendLabel = sendType === 'algo' ? 'ALGO' : assetInfo?.unitName || assetInfo?.name || 'Asset'
 
@@ -209,18 +226,12 @@ export function SendPanel({
                 max
               </button>
             </div>
-            <select
+            <AssetSelect
               value={selectedValue}
-              onChange={(e) => handleAssetChange(e.target.value)}
-              className="w-[120px] shrink-0 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-2 text-sm text-[var(--wui-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
-            >
-              <option value="algo">ALGO</option>
-              {accountAssets?.map((asset) => (
-                <option key={asset.assetId} value={String(asset.assetId)}>
-                  {asset.name}
-                </option>
-              ))}
-            </select>
+              onChange={handleAssetChange}
+              className="w-[160px] shrink-0"
+              options={assetOptions}
+            />
           </div>
 
           {/* Reserve fees checkbox (shown after clicking MAX on ALGO) */}

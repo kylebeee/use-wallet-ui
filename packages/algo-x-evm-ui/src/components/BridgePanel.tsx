@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { AlgoSymbol } from './AlgoSymbol'
+import { AssetSelect } from './AssetSelect'
 import { BackButton } from './BackButton'
 import { CopyButton } from './CopyButton'
 import { ExternalLinkIcon } from './ExternalLinkIcon'
@@ -188,6 +190,30 @@ function chainOptionLabel(chain: BridgeChainDisplay): string {
   return chain.chainName
 }
 
+// Well-known token logos (SVG from popular CDNs / data URIs)
+const TOKEN_LOGOS: Record<string, string> = {
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  WETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  DAI: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
+  USDe: 'https://assets.coingecko.com/coins/images/33613/small/usde.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+}
+
+// Well-known chain logos
+const CHAIN_LOGOS: Record<string, string> = {
+  ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  BSC: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+  POL: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg',
+  OPT: 'https://assets.coingecko.com/coins/images/25244/small/Optimism_%28OP%29.png',
+  AVAX: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  BASE: 'https://assets.coingecko.com/coins/images/31164/small/base.png',
+}
+
 function formatTimeRemaining(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
   const minutes = Math.floor(totalSeconds / 60)
@@ -272,6 +298,42 @@ export function BridgePanel({
     !insufficientFunds &&
     (sourceIsAlgorand ? algorandAddress : evmAddress && algorandAddress)
 
+  const algoIcon = <AlgoSymbol scale={1} />
+  const sourceChainOptions = useMemo(
+    () => chains.map((c) => ({
+      value: c.chainSymbol,
+      label: chainOptionLabel(c),
+      logo: CHAIN_LOGOS[c.chainSymbol] ?? null,
+      icon: c.chainSymbol === 'ALG' ? algoIcon : undefined,
+    })),
+    [chains],
+  )
+  const sourceTokenOptions = useMemo(
+    () => sourceTokens.map((t) => ({
+      value: t.symbol,
+      label: t.symbol,
+      logo: TOKEN_LOGOS[t.symbol] ?? null,
+    })),
+    [sourceTokens],
+  )
+  const destChainOptions = useMemo(
+    () => destinationChains.map((c) => ({
+      value: c.chainSymbol,
+      label: c.chainName,
+      logo: CHAIN_LOGOS[c.chainSymbol] ?? null,
+      icon: c.chainSymbol === 'ALG' ? algoIcon : undefined,
+    })),
+    [destinationChains],
+  )
+  const destTokenOptions = useMemo(
+    () => destinationTokens.map((t) => ({
+      value: t.symbol,
+      label: t.symbol,
+      logo: TOKEN_LOGOS[t.symbol] ?? null,
+    })),
+    [destinationTokens],
+  )
+
   return (
     <>
       {/* Header */}
@@ -323,28 +385,20 @@ export function BridgePanel({
               on
             </label>
             <div className="flex gap-2">
-              <select
+              <AssetSelect
                 value={sourceChainSymbol ?? ''}
-                onChange={(e) => onSourceChainChange(e.target.value)}
-                className="flex-1 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-2 text-sm text-[var(--wui-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
-              >
-                {chains.map((c) => (
-                  <option key={c.chainSymbol} value={c.chainSymbol}>
-                    {chainOptionLabel(c)}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={onSourceChainChange}
+                options={sourceChainOptions}
+                className="flex-1"
+                hideIcons
+              />
+              <AssetSelect
                 value={sourceTokenSymbol ?? ''}
-                onChange={(e) => onSourceTokenChange(e.target.value)}
-                className="w-[100px] shrink-0 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-2 text-sm text-[var(--wui-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
-              >
-                {sourceTokens.map((t) => (
-                  <option key={t.symbol} value={t.symbol}>
-                    {t.symbol}
-                  </option>
-                ))}
-              </select>
+                onChange={onSourceTokenChange}
+                options={sourceTokenOptions}
+                className="w-[120px] shrink-0"
+
+              />
             </div>
           </div>
 
@@ -383,33 +437,25 @@ export function BridgePanel({
             </label>
             <div className="flex gap-2 items-center">
               {destinationChains.length > 0 && onDestinationChainChange ? (
-                <select
+                <AssetSelect
                   value={destinationChainSymbol ?? ''}
-                  onChange={(e) => onDestinationChainChange(e.target.value)}
-                  className="flex-1 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-2 text-sm text-[var(--wui-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
-                >
-                  {destinationChains.map((c) => (
-                    <option key={c.chainSymbol} value={c.chainSymbol}>
-                      {c.chainName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={onDestinationChainChange}
+                  options={destChainOptions}
+                  className="flex-1"
+                  hideIcons
+                />
               ) : (
                 <div className="flex-1 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-3 text-sm text-[var(--wui-color-text-secondary)]">
                   Algorand
                 </div>
               )}
-              <select
+              <AssetSelect
                 value={destinationTokenSymbol ?? ''}
-                onChange={(e) => onDestinationTokenChange(e.target.value)}
-                className="w-[100px] shrink-0 rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg-secondary)] py-2.5 px-2 text-sm text-[var(--wui-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--wui-color-primary)] focus:border-transparent"
-              >
-                {destinationTokens.map((t) => (
-                  <option key={t.symbol} value={t.symbol}>
-                    {t.symbol}
-                  </option>
-                ))}
-              </select>
+                onChange={onDestinationTokenChange}
+                options={destTokenOptions}
+                className="w-[120px] shrink-0"
+
+              />
             </div>
           </div>
 
