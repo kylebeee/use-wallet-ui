@@ -326,7 +326,7 @@ export function ManagePanel({
                   className="wui-asset-send inline-flex items-center justify-center w-4 h-4 rounded-xs border border-[var(--wui-color-border)] text-[var(--wui-color-text-secondary)] hover:text-[var(--wui-color-text-secondary)] hover:border-[var(--wui-color-text-secondary)] transition-colors shrink-0"
                   title={`Send ${asset.unitName || asset.name}`}
                 >
-                  <span className="wui-asset-send-label" style={{ display: 'none' }}>Send</span>
+                  <span className="wui-asset-send-label" style={{ display: 'none' }}>SEND</span>
                   <ArrowUpRight size={10} strokeWidth={2.5} className="wui-asset-send-icon" />
                 </button>
               )}
