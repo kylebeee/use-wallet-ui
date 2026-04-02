@@ -17,7 +17,7 @@ import { QueryClientProvider, useIsFetching, useQueryClient } from '@tanstack/re
 import { ALGORAND_EVM_CHAIN_CONFIG } from 'algo-x-evm-sdk'
 import React, { ReactElement, RefObject, useState } from 'react'
 
-import { ManagePanel, useAssets, type AssetHoldingDisplay } from '@d13co/algo-x-evm-ui'
+import { ManagePanel, useAssets, usePeraAssetData, type AssetHoldingDisplay } from '@d13co/algo-x-evm-ui'
 
 import { useAccountInfo } from '../hooks/useAccountInfo'
 import { useAssetRegistry } from '../hooks/useAssetRegistry'
@@ -93,6 +93,9 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
 
   const { assets: assetInfoMap } = useAssets(assetIds, algodClient as any, activeNetwork)
 
+  const heldAssetIds = React.useMemo(() => allHoldings.map((a) => Number(a.assetId)), [allHoldings])
+  const { peraData } = usePeraAssetData(heldAssetIds, activeNetwork)
+
   const assetHoldings = React.useMemo((): AssetHoldingDisplay[] => {
     return allHoldings
       .map((holding) => {
@@ -113,16 +116,20 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
             amount = `${whole}.${frac}`
           }
         }
-        return {
+        const pera = peraData.get(Number(holding.assetId))
+        const entry: AssetHoldingDisplay = {
           assetId: Number(holding.assetId),
           name: info.name || `ASA#${holding.assetId}`,
           unitName: info.unitName,
           amount,
           decimals: info.decimals,
+          logo: pera?.logo,
+          verificationTier: pera?.verificationTier,
         }
+        return entry
       })
       .filter((a): a is AssetHoldingDisplay => a !== null)
-  }, [allHoldings, assetInfoMap])
+  }, [allHoldings, assetInfoMap, peraData])
 
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
