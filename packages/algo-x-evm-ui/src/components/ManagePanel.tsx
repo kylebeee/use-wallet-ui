@@ -35,6 +35,8 @@ export interface ManagePanelProps {
   onExplore?: () => void
   /** When provided, the Bridge button calls this instead of navigating to the embedded bridge panel */
   onBridgeClick?: () => void
+  /** Called when entering the embedded bridge panel (e.g. to enable fee/quote loading) */
+  onBridgeEnter?: () => void
   addToWallet?: Omit<AddToWalletPanelProps, 'onBack'>
   /** Connected wallet info — when provided, shows address, wallet identity, copy & disconnect */
   activeAddress?: string | null
@@ -92,6 +94,7 @@ export function ManagePanel({
   isRefreshing,
   onExplore,
   onBridgeClick,
+  onBridgeEnter,
   addToWallet,
   activeAddress,
   displayName,
@@ -122,7 +125,8 @@ export function ManagePanel({
   const goForward = useCallback((target: 'send' | 'opt-in' | 'bridge' | 'swap' | 'add-to-wallet') => {
     setAnimDir('forward')
     setMode(target)
-  }, [])
+    if (target === 'bridge') onBridgeEnter?.()
+  }, [onBridgeEnter])
 
   const goBack = useCallback((resetFn?: () => void) => {
     setAnimDir('back')
@@ -303,10 +307,7 @@ export function ManagePanel({
       <h4 className="text-xs font-medium text-[var(--wui-color-text-secondary)] uppercase tracking-wide mb-1.5">
         Assets
       </h4>
-      <div
-        className={showAllAssets ? 'overflow-y-auto' : ''}
-        style={showAllAssets ? { maxHeight: `${INITIAL_ASSET_COUNT * 2 * 28}px` } : undefined}
-      >
+      <div>
         {(showAllAssets ? assets : assets.slice(0, INITIAL_ASSET_COUNT)).map((asset) => (
           <div
             key={asset.assetId}

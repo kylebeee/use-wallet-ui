@@ -40,22 +40,12 @@ import type { RainbowKitUIConfig } from './providers/WalletUIProvider'
 const BRIDGE_CHAINS = [mainnet, base, bsc, polygon, arbitrum, avalanche, optimism, celo, sonic, unichain, linea]
 
 /**
- * Default HTTP transports for bridge chains using DRPC public endpoints.
- * Prevents wagmi from using viem's built-in defaults (e.g. eth.merkle.io)
- * which can generate excessive background requests.
+ * CORS-safe fallback RPCs for chains whose viem defaults block cross-origin
+ * requests (e.g., eth.merkle.io for Ethereum mainnet in viem >=2.27).
+ * User-provided transports always take priority over these.
  */
-const BRIDGE_TRANSPORTS: Record<number, ReturnType<typeof http>> = {
-  [mainnet.id]: http('https://eth.drpc.org'),
-  [base.id]: http('https://base.drpc.org'),
-  [bsc.id]: http('https://bsc.drpc.org'),
-  [polygon.id]: http('https://polygon.drpc.org'),
-  [arbitrum.id]: http('https://arbitrum.drpc.org'),
-  [avalanche.id]: http('https://avalanche.drpc.org'),
-  [optimism.id]: http('https://optimism.drpc.org'),
-  [celo.id]: http('https://celo.drpc.org'),
-  [sonic.id]: http('https://sonic.drpc.org'),
-  [unichain.id]: http('https://unichain.drpc.org'),
-  [linea.id]: http('https://linea.drpc.org'),
+const CORS_SAFE_RPCS: Record<number, string> = {
+  [mainnet.id]: 'https://cloudflare-eth.com',
 }
 
 const DEFAULT_WALLETS = [
@@ -171,9 +161,12 @@ export const getDefaultConfig = (params: Parameters<typeof rkGetDefaultConfig>[0
       : {}),
   }
 
-  // Merge DRPC transports with user-provided transports
+  // Build explicit transports for every chain.
   const userTransports = p.transports ?? {}
-  const transports = { ...BRIDGE_TRANSPORTS, ...userTransports }
+  const transports: Record<number, ReturnType<typeof http>> = {}
+  for (const c of chains as { id: number; rpcUrls: { default: { http: string[] } } }[]) {
+    transports[c.id] = userTransports[c.id] ?? http(CORS_SAFE_RPCS[c.id] ?? c.rpcUrls.default.http[0])
+  }
 
   const config = rkGetDefaultConfig({
     wallets: DEFAULT_WALLETS,
@@ -183,6 +176,12 @@ export const getDefaultConfig = (params: Parameters<typeof rkGetDefaultConfig>[0
     ...(appUrl ? { appUrl } : {}),
     ...(walletConnectParameters ? { walletConnectParameters } : {}),
   })
+
+  // Workaround: @wagmi/core@2.22 doesn't expose `transports` on the config
+  // object, but @wagmi/connectors@6.2 reads `config.transports` inside
+  // WalletConnect's `initProvider` → `extractRpcUrls`.  Patch it in so
+  // connectors can build their RPC maps.
+  ;(config as any).transports = transports
 
   if (debug) {
     // Debug: log wagmi state transitions (connections, chain changes)
