@@ -12,6 +12,8 @@ export { NfdAvatar } from './components/NfdAvatar'
 // Hooks
 export { useBridge } from './hooks/useBridge'
 export type { UseBridgeReturn, UseBridgeOptions, BridgeStatus, BridgeChain, BridgeToken } from './hooks/useBridge'
+export { useSwap } from './hooks/useSwap'
+export type { UseSwapReturn, UseSwapOptions } from './hooks/useSwap'
 export { useNfd } from './hooks/useNfd'
 export type { NfdRecord, NfdLookupResponse } from './hooks/useNfd'
 export { useAccountInfo } from './hooks/useAccountInfo'

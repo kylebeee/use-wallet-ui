@@ -3,9 +3,10 @@ import { AddToWalletPanel, type AddToWalletPanelProps } from './AddToWalletPanel
 import { AlgoSymbol } from './AlgoSymbol'
 import { BackButton } from './BackButton'
 import { BridgePanel, type BridgePanelProps } from './BridgePanel'
-import { ArrowDownLeft, ArrowUpRight, ArrowsExchange, Check, ChevronsUpDown, Clipboard, List, RefreshCw, Search, VerifiedBadge, SuspiciousBadge } from './icons'
+import { ArrowDownLeft, ArrowUpRight, ArrowsExchange, ArrowsUpDown, Check, ChevronsUpDown, Clipboard, List, RefreshCw, Search, VerifiedBadge, SuspiciousBadge } from './icons'
 import { ReceivePanel, type ReceivePanelProps } from './ReceivePanel'
 import { SendPanel, type SendPanelProps } from './SendPanel'
+import { SwapPanel, type SwapPanelProps } from './SwapPanel'
 
 export interface AssetHoldingDisplay {
   assetId: number
@@ -25,6 +26,7 @@ export interface ManagePanelProps {
   send?: Omit<SendPanelProps, 'onBack'>
   optIn?: Omit<ReceivePanelProps, 'onBack'>
   bridge?: Omit<BridgePanelProps, 'onBack'>
+  swap?: Omit<SwapPanelProps, 'onBack'>
   assets?: AssetHoldingDisplay[]
   totalBalance?: number | null
   availableBalance?: number | null
@@ -47,6 +49,8 @@ export interface ManagePanelProps {
   accounts?: { address: string; displayName?: string | null; icon?: string | null }[]
   /** Called when user selects a different account */
   onAccountSwitch?: (address: string) => void
+  /** EVM controller address — shown between the account switcher and balance */
+  evmAddress?: string | null
   /** Enable two-column layout via container query at the given width (default: off) */
   wideBreakpoint?: number
 }
@@ -70,8 +74,8 @@ function formatDisplayAmount(amount: string): string {
 }
 
 function formatShortAddr(addr: string, prefixLen = 6, suffixLen = 4): string {
-  if (addr.length <= prefixLen + suffixLen + 3) return addr
-  return `${addr.slice(0, prefixLen)}...${addr.slice(-suffixLen)}`
+  if (addr.length <= prefixLen + suffixLen + 2) return addr
+  return `${addr.slice(0, prefixLen)}..${addr.slice(-suffixLen)}`
 }
 
 export function ManagePanel({
@@ -82,6 +86,7 @@ export function ManagePanel({
   send,
   optIn,
   bridge,
+  swap,
   assets,
   totalBalance,
   availableBalance,
@@ -98,15 +103,17 @@ export function ManagePanel({
   onDisconnect,
   accounts,
   onAccountSwitch,
+  evmAddress,
   wideBreakpoint,
 }: ManagePanelProps) {
-  type Mode = 'main' | 'send' | 'opt-in' | 'bridge' | 'add-to-wallet'
+  type Mode = 'main' | 'send' | 'opt-in' | 'bridge' | 'swap' | 'add-to-wallet'
   const [mode, setMode] = useState<Mode>('main')
   const [showAllAssets, setShowAllAssets] = useState(false)
   const [animDir, setAnimDir] = useState<'forward' | 'back' | 'none'>('none')
   const [isCopied, setIsCopied] = useState(false)
   const [accountSwitcherOpen, setAccountSwitcherOpen] = useState(false)
   const accountSwitcherRef = useRef<HTMLDivElement>(null)
+  const hasAccountSwitcher = !!(accounts && accounts.length > 1 && onAccountSwitch)
 
   const handleCopyAddress = useCallback(() => {
     if (!activeAddress) return
@@ -115,10 +122,11 @@ export function ManagePanel({
     setTimeout(() => setIsCopied(false), 2000)
   }, [activeAddress])
 
-  const goForward = useCallback((target: 'send' | 'opt-in' | 'bridge' | 'add-to-wallet') => {
+  const goForward = useCallback((target: 'send' | 'opt-in' | 'bridge' | 'swap' | 'add-to-wallet') => {
     setAnimDir('forward')
     setMode(target)
-  }, [])
+    if (target === 'bridge') onBridgeEnter?.()
+  }, [onBridgeEnter])
 
   const goBack = useCallback((resetFn?: () => void) => {
     setAnimDir('back')
@@ -161,57 +169,62 @@ export function ManagePanel({
               <img src={walletIcon} alt={`${walletName || 'Wallet'} icon`} className="max-w-full max-h-full" />
             </div>
           )}
-          <div className="min-w-0 flex flex-col">
-            <span className="wui-header-name text-base font-bold leading-none text-[var(--wui-color-text)] wallet-custom-font truncate" title={activeAddress}>
-              {displayName || formatShortAddr(activeAddress)}
-            </span>
-            {displayName && (
-              <span className="wui-header-sub text-xs text-[var(--wui-color-text-secondary)] truncate mt-0.5">
-                {formatShortAddr(activeAddress)}
-              </span>
+          <div ref={accountSwitcherRef} className="min-w-0 relative">
+            <button
+              type="button"
+              onClick={hasAccountSwitcher ? () => setAccountSwitcherOpen((v) => !v) : handleCopyAddress}
+              className="flex items-center gap-1.5 min-w-0 rounded-lg px-1.5 py-1 -mx-1.5 -my-1 hover:bg-[var(--wui-color-bg-secondary)] transition-colors"
+              title={hasAccountSwitcher ? 'Switch account' : 'Copy address'}
+            >
+              <div className="min-w-0 flex flex-col">
+                <span className="wui-header-name text-base font-bold leading-none text-[var(--wui-color-text)] wallet-custom-font truncate" title={activeAddress}>
+                  {displayName || formatShortAddr(activeAddress)}
+                </span>
+                {displayName && (
+                  <span className="wui-header-sub text-xs text-[var(--wui-color-text-secondary)] truncate mt-0.5">
+                    {formatShortAddr(activeAddress)}
+                  </span>
+                )}
+              </div>
+              {hasAccountSwitcher ? (
+                <ChevronsUpDown size={12} className="shrink-0 text-[var(--wui-color-text-secondary)]" />
+              ) : (
+                isCopied ? <Check size={12} className="shrink-0 text-green-500" /> : <Clipboard size={12} className="shrink-0 text-[var(--wui-color-text-secondary)]" />
+              )}
+            </button>
+            {hasAccountSwitcher && accountSwitcherOpen && (
+              <div className="absolute z-50 mt-1 left-0 min-w-[220px] max-h-[240px] overflow-y-auto rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg)] shadow-lg">
+                {accounts!.map((acct) => (
+                  <button
+                    key={acct.address}
+                    type="button"
+                    onClick={() => {
+                      onAccountSwitch!(acct.address)
+                      setAccountSwitcherOpen(false)
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-[var(--wui-color-bg-secondary)] text-left ${
+                      acct.address === activeAddress ? 'bg-[var(--wui-color-bg-secondary)] font-medium' : ''
+                    } text-[var(--wui-color-text)]`}
+                  >
+                    {acct.icon && (
+                      <img src={acct.icon} alt="" width={16} height={16} className="rounded shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {acct.displayName || formatShortAddr(acct.address)}
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-          <button
-            onClick={handleCopyAddress}
-            className="p-1.5 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center shrink-0"
-            title="Copy address"
-          >
-            {isCopied ? <Check size={14} className="text-green-500" /> : <Clipboard size={14} />}
-          </button>
-          {accounts && accounts.length > 1 && onAccountSwitch && (
-            <div ref={accountSwitcherRef} className="relative shrink-0">
-              <button
-                onClick={() => setAccountSwitcherOpen((v) => !v)}
-                className="p-1.5 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center"
-                title="Switch account"
-              >
-                <ChevronsUpDown size={14} />
-              </button>
-              {accountSwitcherOpen && (
-                <div className="absolute z-50 mt-1 right-0 min-w-[200px] max-h-[200px] overflow-y-auto rounded-lg border border-[var(--wui-color-border)] bg-[var(--wui-color-bg)] shadow-lg">
-                  {accounts.map((acct) => (
-                    <button
-                      key={acct.address}
-                      type="button"
-                      onClick={() => {
-                        onAccountSwitch(acct.address)
-                        setAccountSwitcherOpen(false)
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--wui-color-bg-secondary)] text-left ${
-                        acct.address === activeAddress ? 'bg-[var(--wui-color-bg-secondary)] font-medium' : ''
-                      } text-[var(--wui-color-text)]`}
-                    >
-                      {acct.icon && (
-                        <img src={acct.icon} alt="" width={16} height={16} className="rounded shrink-0" />
-                      )}
-                      <span className="truncate">
-                        {acct.displayName || formatShortAddr(acct.address)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          {hasAccountSwitcher && (
+            <button
+              onClick={handleCopyAddress}
+              className="p-1.5 rounded-lg hover:bg-[var(--wui-color-bg-secondary)] transition-colors text-[var(--wui-color-text-secondary)] flex items-center justify-center shrink-0"
+              title="Copy address"
+            >
+              {isCopied ? <Check size={14} className="text-green-500" /> : <Clipboard size={14} />}
+            </button>
           )}
           <div className="wui-header-actions ml-auto flex items-center gap-1.5 shrink-0">
             {onRefresh && (
@@ -259,6 +272,13 @@ export function ManagePanel({
     </div>
   )
 
+  const evmControllerSection = evmAddress ? (
+    <div className="mb-3 bg-[var(--wui-color-bg-secondary)] rounded-lg px-3 py-2">
+      <span className="text-xs text-[var(--wui-color-text-secondary)]">EVM Controller</span>
+      <code className="text-sm font-medium text-[var(--wui-color-text)] truncate block mt-0.5">{evmAddress}</code>
+    </div>
+  ) : null
+
   const balanceNarrow = (
     <div className="wui-balance mb-4 bg-[var(--wui-color-bg-secondary)] rounded-lg p-3">
       <div className="flex justify-between items-center">
@@ -287,10 +307,7 @@ export function ManagePanel({
       <h4 className="text-xs font-medium text-[var(--wui-color-text-secondary)] uppercase tracking-wide mb-1.5">
         Assets
       </h4>
-      <div
-        className={showAllAssets ? 'overflow-y-auto' : ''}
-        style={showAllAssets ? { maxHeight: `${INITIAL_ASSET_COUNT * 2 * 28}px` } : undefined}
-      >
+      <div>
         {(showAllAssets ? assets : assets.slice(0, INITIAL_ASSET_COUNT)).map((asset) => (
           <div
             key={asset.assetId}
@@ -367,6 +384,10 @@ export function ManagePanel({
         <ArrowsExchange className="h-4 w-4 mr-1.5" />
         Bridge
       </button>
+      <button onClick={() => goForward('swap')} disabled={!swap} className={actionBtnClass}>
+        <ArrowsUpDown className="h-4 w-4 mr-1.5" />
+        Swap
+      </button>
       <button onClick={onExplore} disabled={!onExplore} className={actionBtnClass}>
         <Search className="h-4 w-4 mr-1.5" />
         Explore
@@ -374,10 +395,10 @@ export function ManagePanel({
       {addToWallet && (
         <button
           onClick={() => goForward('add-to-wallet')}
-          className={`${vertical ? '' : 'col-span-2 '}${actionBtnClass}`}
+          className={actionBtnClass}
         >
-          <img src={addToWallet.walletIcon} alt={`${addToWallet.walletName} icon`} width={16} height={16} className="mr-1.5 object-contain" />
-          Add to {addToWallet.walletName}
+          <img src={addToWallet.walletIcon} alt={`${addToWallet.walletName} icon`} width={16} height={16} className="mr-1.5 object-contain shrink-0" />
+          <span className="truncate">Add to {addToWallet.walletName}</span>
         </button>
       )}
     </div>
@@ -392,6 +413,8 @@ export function ManagePanel({
     panelContent = <ReceivePanel {...optIn} onOptOut={handleOptOut} onBack={() => goBack(optIn.reset)} />
   } else if (mode === 'bridge' && bridge) {
     panelContent = <BridgePanel {...bridge} onBack={() => goBack(bridge.onReset)} />
+  } else if (mode === 'swap' && swap) {
+    panelContent = <SwapPanel {...swap} onBack={() => goBack(swap.reset)} />
   } else if (mode === 'add-to-wallet' && addToWallet) {
     panelContent = <AddToWalletPanel {...addToWallet} onBack={() => goBack()} />
   }
@@ -410,6 +433,7 @@ export function ManagePanel({
     const content = panelContent ?? (
       <>
         {headerSection}
+        {evmControllerSection}
         {balanceNarrow}
         {assetsSection}
         <div className="border-t border-[var(--wui-color-border)] mb-3" />
@@ -496,6 +520,7 @@ export function ManagePanel({
       `}</style>
       <div style={{ containerName: 'wui-manage', containerType: 'inline-size' }}>
         {headerSection}
+        {evmControllerSection}
 
         {/* ── Narrow layout (below breakpoint) ── */}
         <div className="wui-narrow-only" style={{ display: 'block' }}>
@@ -533,6 +558,10 @@ export function ManagePanel({
               <button onClick={onBridgeClick ?? (() => { onBridgeEnter?.(); goForward('bridge') })} disabled={!bridge && !onBridgeClick} className={sideActionBtnClass('bridge')}>
                 <ArrowsExchange className="h-4 w-4 mr-1.5" />
                 Bridge
+              </button>
+              <button onClick={() => goForward('swap')} disabled={!swap} className={sideActionBtnClass('swap')}>
+                <ArrowsUpDown className="h-4 w-4 mr-1.5" />
+                Swap
               </button>
               <button onClick={onExplore} disabled={!onExplore} className={`wui-side-btn w-full py-2.5 px-4 font-medium rounded-xl transition-all text-sm flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none bg-[var(--wui-color-bg-tertiary)] text-[var(--wui-color-text)] hover:brightness-90`}>
                 <Search className="h-4 w-4 mr-1.5" />

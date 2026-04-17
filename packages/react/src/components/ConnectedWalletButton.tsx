@@ -1,5 +1,4 @@
 import { useWallet } from '@txnlab/use-wallet-react'
-import { formatShortAddress } from '@txnlab/utils-ts'
 import React from 'react'
 
 import { useNfd } from '../hooks/useNfd'
@@ -82,7 +81,7 @@ export const ConnectedWalletButton = React.forwardRef<
           <span className="hidden md:block max-w-[160px] truncate">
             {nfdName ||
               (activeAddress
-                ? formatShortAddress(activeAddress, 6, 4)
+                ? `${activeAddress.slice(0, 6)}..${activeAddress.slice(-4)}`
                 : 'Connect')}
           </span>
 

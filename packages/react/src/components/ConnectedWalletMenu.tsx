@@ -24,6 +24,7 @@ import { useAssetRegistry } from '../hooks/useAssetRegistry'
 import { useNfd } from '../hooks/useNfd'
 import { useOptIn } from '../hooks/useOptIn'
 import { useSend } from '../hooks/useSend'
+import { useSwap, type UseSwapOptions } from '../hooks/useSwap'
 import { useBridgeDialog } from '../providers/BridgeDialogProvider'
 import { useWalletUI } from '../providers/WalletUIProvider'
 import { ConnectedWalletButton } from './ConnectedWalletButton'
@@ -35,10 +36,12 @@ type RefableElement = ReactElement & {
 
 export interface ConnectedWalletMenuProps {
   children?: RefableElement
+  /** Swap integration options. When provided, enables the Swap panel. */
+  swap?: UseSwapOptions
 }
 
-function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
-  const { activeAddress, activeWallet, algodClient } = useWallet()
+function ConnectedWalletMenuContent({ children, swap: swapOptions }: ConnectedWalletMenuProps) {
+  const { activeAddress, activeWallet, activeWalletAccounts, algodClient } = useWallet()
   const { theme } = useWalletUI()
   const rqClient = useQueryClient()
   const isFetching = useIsFetching()
@@ -47,6 +50,13 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
   const { activeNetwork } = useNetwork()
   const registry = useAssetRegistry()
   const send = useSend()
+
+  // Swap panel — only active when consumer provides swap options
+  const defaultSwapOptions = React.useMemo((): UseSwapOptions => ({
+    fetchQuote: async () => { throw new Error('Swap not configured') },
+    executeSwap: async () => { throw new Error('Swap not configured') },
+  }), [])
+  const swapState = useSwap(swapOptions ?? defaultSwapOptions)
 
   const [showAvailableBalance, setShowAvailableBalance] = useState(() => {
     const stored = localStorage.getItem('uwui:balance-preference')
@@ -94,7 +104,7 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
   const { assets: assetInfoMap } = useAssets(assetIds, algodClient as any, activeNetwork)
 
   const heldAssetIds = React.useMemo(() => allHoldings.map((a) => Number(a.assetId)), [allHoldings])
-  const { peraData } = usePeraAssetData(heldAssetIds, activeNetwork)
+  const { peraData, fetchFor: fetchPeraFor } = usePeraAssetData(heldAssetIds, activeNetwork)
 
   const assetHoldings = React.useMemo((): AssetHoldingDisplay[] => {
     return allHoldings
@@ -138,6 +148,7 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
       if (!open) {
         optIn.reset()
         send.reset()
+        swapState.reset()
       }
     },
     placement: 'bottom-end',
@@ -148,6 +159,8 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
   const txInProgress =
     send.status === 'signing' ||
     send.status === 'sending' ||
+    swapState.status === 'signing' ||
+    swapState.status === 'sending' ||
     optIn.status === 'signing' ||
     optIn.status === 'sending' ||
     bridge.status === 'permit-signing' ||
@@ -272,7 +285,8 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
                     showAvailableBalance={showAvailableBalance}
                     onToggleBalance={toggleBalanceView}
                     send={{ ...send, explorerUrl: getTxExplorerUrl(send.txId) }}
-                    optIn={{ ...optIn, evmAddress, explorerUrl: getTxExplorerUrl(optIn.txId) }}
+                    optIn={{ ...optIn, evmAddress, explorerUrl: getTxExplorerUrl(optIn.txId), peraData, fetchPeraData: fetchPeraFor }}
+                    swap={swapOptions ? { ...swapState, accountAssets: assetHoldings.length > 0 ? assetHoldings : undefined, totalBalance, availableBalance, explorerUrl: getTxExplorerUrl(swapState.txId), peraData, fetchPeraData: fetchPeraFor } : undefined}
                     onBridgeClick={bridge.isAvailable ? openBridge : undefined}
                     assets={assetHoldings.length > 0 ? assetHoldings : undefined}
                     totalBalance={totalBalance}
@@ -282,9 +296,16 @@ function ConnectedWalletMenuContent({ children }: ConnectedWalletMenuProps) {
                     onExplore={handleExplore}
                     activeAddress={activeAddress}
                     displayName={nfdName}
+                    evmAddress={evmAddress}
                     walletName={evmWalletName}
                     walletIcon={evmWalletIcon}
                     onDisconnect={handleDisconnect}
+                    accounts={activeWalletAccounts?.map((a) => ({
+                      address: a.address,
+                      displayName: a.name !== a.address ? a.name : null,
+                      icon: null,
+                    }))}
+                    onAccountSwitch={activeWallet ? (addr: string) => activeWallet.setActiveAccount(addr) : undefined}
                     addToWallet={{
                       walletName: evmWalletName,
                       walletIcon: evmWalletIcon,

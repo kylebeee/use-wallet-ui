@@ -116,8 +116,8 @@ export interface BridgeTransferStatus {
 const EMPTY_CHAINS: BridgeChainDisplay[] = []
 
 function formatShortAddr(addr: string): string {
-  if (addr.length <= 14) return addr
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  if (addr.length <= 12) return addr
+  return `${addr.slice(0, 6)}..${addr.slice(-4)}`
 }
 
 /** Displays a transaction ID with a copy button */
@@ -479,7 +479,7 @@ export function BridgePanel({
                 <span className="text-[var(--wui-color-text-secondary)]">{extraGasAlgo}</span>
               </div>
             )}
-            {gasFee && (
+            {(gasFee || gasFeeLoading) && (
               <div className="flex justify-between items-center text-xs">
                 <span className="text-[var(--wui-color-text-secondary)]">Network fee</span>
                 <span className="text-[var(--wui-color-text-secondary)]">

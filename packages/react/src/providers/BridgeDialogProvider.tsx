@@ -46,6 +46,7 @@ export function BridgeDialogProvider({ children }: { children: ReactNode }) {
     if (isProcessing) return
     setIsOpen(false)
     setIsMinimized(false)
+    setIsEnabled(false)
     bridge.reset()
   }, [isProcessing, bridge])
 

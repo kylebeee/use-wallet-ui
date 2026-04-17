@@ -698,6 +698,14 @@ export function useBridgePanel(wallet: BridgeWalletAdapter, options: UseBridgeOp
       return
     }
 
+    // Wait for fee calculation to complete before computing the quote.
+    // Without this, the quote runs with the full amount (no fee deduction)
+    // and displays an inflated "You receive" value.
+    if (gasFeeLoading) {
+      setReceivedAmount(null)
+      return
+    }
+
     // Fees are inclusive: always subtract stablecoin fee + extra gas from the
     // input so the quote reflects what the user actually receives.
     let quoteAmount = amount
@@ -733,7 +741,7 @@ export function useBridgePanel(wallet: BridgeWalletAdapter, options: UseBridgeOp
       cancelled = true
       clearTimeout(timer)
     }
-  }, [amount, gasFee, extraGasAmount, resolveSourceSdkToken, resolveDestSdkToken])
+  }, [amount, gasFee, gasFeeLoading, extraGasAmount, resolveSourceSdkToken, resolveDestSdkToken])
 
   // -- Refresh source chain balances after a successful EVM bridge --
 
