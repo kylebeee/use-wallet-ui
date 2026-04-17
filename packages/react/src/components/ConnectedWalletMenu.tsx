@@ -56,7 +56,7 @@ function ConnectedWalletMenuContent({ children, swap: swapOptions }: ConnectedWa
     fetchQuote: async () => { throw new Error('Swap not configured') },
     executeSwap: async () => { throw new Error('Swap not configured') },
   }), [])
-  const swapState = useSwap(swapOptions ?? defaultSwapOptions)
+  const swapState = useSwap(swapOptions ?? defaultSwapOptions, undefined, registry)
 
   const [showAvailableBalance, setShowAvailableBalance] = useState(() => {
     const stored = localStorage.getItem('uwui:balance-preference')
@@ -302,7 +302,7 @@ function ConnectedWalletMenuContent({ children, swap: swapOptions }: ConnectedWa
                     onDisconnect={handleDisconnect}
                     accounts={activeWalletAccounts?.map((a) => ({
                       address: a.address,
-                      displayName: a.name !== a.address ? a.name : null,
+                      displayName: null,
                       icon: null,
                     }))}
                     onAccountSwitch={activeWallet ? (addr: string) => activeWallet.setActiveAccount(addr) : undefined}
