@@ -1,4 +1,5 @@
 import { getDefaultConfig as rkGetDefaultConfig } from '@rainbow-me/rainbowkit'
+import { http, type Transport } from 'viem'
 import {
   mainnet,
   base,
@@ -30,6 +31,7 @@ import {
 } from './components/RainbowKitBridge'
 import { createBoundProvider } from './components/RainbowKitAutoProvider'
 import type { RainbowKitUIConfig } from './providers/WalletUIProvider'
+import { DEFAULT_RPC_URLS } from './services/bridgeSdk'
 
 /**
  * EVM chains supported by the Allbridge bridge integration.
@@ -37,6 +39,26 @@ import type { RainbowKitUIConfig } from './providers/WalletUIProvider'
  * getConnectorClient, etc.) work when MetaMask is on any of these networks.
  */
 const BRIDGE_CHAINS = [mainnet, base, bsc, polygon, arbitrum, avalanche, optimism, celo, sonic, unichain, linea]
+
+/**
+ * Default wagmi/viem transports for the bridge chains, pointing at the same
+ * DRPC endpoints used by the Allbridge SDK. Without these, viem falls back to
+ * each chain's `rpcUrls.default.http[0]` (e.g. `eth.merkle.io` for mainnet).
+ * Callers can override per-chain via `params.transports`.
+ */
+const BRIDGE_TRANSPORTS: Record<number, Transport> = {
+  [mainnet.id]: http(DEFAULT_RPC_URLS.ETH),
+  [base.id]: http(DEFAULT_RPC_URLS.BAS),
+  [bsc.id]: http(DEFAULT_RPC_URLS.BSC),
+  [polygon.id]: http(DEFAULT_RPC_URLS.POL),
+  [arbitrum.id]: http(DEFAULT_RPC_URLS.ARB),
+  [avalanche.id]: http(DEFAULT_RPC_URLS.AVA),
+  [optimism.id]: http(DEFAULT_RPC_URLS.OPT),
+  [celo.id]: http(DEFAULT_RPC_URLS.CEL),
+  [sonic.id]: http(DEFAULT_RPC_URLS.SNC),
+  [unichain.id]: http(DEFAULT_RPC_URLS.UNI),
+  [linea.id]: http(DEFAULT_RPC_URLS.LIN),
+}
 
 const DEFAULT_WALLETS = [
   {
@@ -85,6 +107,10 @@ function clearStaleWcPairings(): void {
  * - Registers Allbridge-compatible EVM chains (mainnet, Base, BNB, Polygon,
  *   Arbitrum, Avalanche, Optimism, Celo, Sonic, Unichain, Linea) so that
  *   wagmi operations work regardless of which network the wallet is on.
+ * - Sets per-chain viem transports for the bridge chains to the same DRPC
+ *   URLs used by the Allbridge SDK, so wagmi/viem reads don't fall back to
+ *   viem's default RPCs (e.g. `eth.merkle.io`). Override per-chain via
+ *   `params.transports`.
  * - Sets `walletConnectParameters.metadata.redirect.universal` to the current
  *   origin so that MetaMask Mobile redirects back to the browser tab after
  *   signing, allowing the WalletConnect relay response to be delivered.
@@ -151,10 +177,16 @@ export const getDefaultConfig = (params: Parameters<typeof rkGetDefaultConfig>[0
       : {}),
   }
 
+  // Caller transports win over bridge defaults so users can swap in their own
+  // RPCs (e.g. Alchemy/Infura keys) per chain.
+  const userTransports = (p.transports ?? {}) as Record<number, Transport>
+  const transports = { ...BRIDGE_TRANSPORTS, ...userTransports }
+
   const config = rkGetDefaultConfig({
     wallets: DEFAULT_WALLETS,
     ...params,
     chains: chains as any,
+    transports,
     ...(appUrl ? { appUrl } : {}),
     ...(walletConnectParameters ? { walletConnectParameters } : {}),
   })
